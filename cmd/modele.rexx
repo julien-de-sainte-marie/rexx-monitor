@@ -3,7 +3,7 @@
                            ==============================
 Ce produit est un graticiel (houla...)
 Ecrit et maintenu par Julien de Sainte Marie
-mailto:julien.desaintemarie@unilog.fr
+mailto:julien.desaintemarie@gmail.com
 
 ****************************************************************************************/
 Parse Arg ProcessName" "Reste
@@ -417,14 +417,14 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-   
+
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then 
+      If Translate(msgData) \= SysVars.SysLEnd Then
          Call QueueData MSG
       Else
          Call PushData MSG
-      
+
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -1206,7 +1206,7 @@ return DdeRc
 
 /* -----------------------------------------------------------------------------------
    monSleep
-      Periode: Durée d'attente exprimée en seconde
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
 -------------------------------------------------------------------------------------- */
 monSleep:
 Arg Periode
@@ -1225,7 +1225,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SleepEx
-      Periode: Durée d'attente exprimée en seconde
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
 -------------------------------------------------------------------------------------- */
 SleepEx:
 Arg Periode
@@ -1254,8 +1254,8 @@ Return slexRC
 
 /* -----------------------------------------------------------------------------------
    SysSleep
-      Periode: Durée d'attente exprimée en seconde
-      La fonction se réveille si une donnée est dans la file d'attente
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
+      La fonction se rï¿½veille si une donnï¿½e est dans la file d'attente
 -------------------------------------------------------------------------------------- */
 SysSleep:
 Arg dwT
@@ -1275,7 +1275,7 @@ Return ssDelay
 
 /* -----------------------------------------------------------------------------------
    SysCls
-      Efacer l'écran
+      Efacer l'ï¿½cran
 -------------------------------------------------------------------------------------- */
 SysCls:
 
@@ -1285,7 +1285,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SysFileTree
-      Lister les fichiers d'un répertoire
+      Lister les fichiers d'un rï¿½pertoire
 -------------------------------------------------------------------------------------- */
 SysFileTree:
 Parse arg vPath, vStem, vX
@@ -1310,7 +1310,7 @@ Return 0
 
 /* -----------------------------------------------------------------------------------
    getWSOCKIP
-       Récupérer l'adresse IP de la tour de controle
+       Rï¿½cupï¿½rer l'adresse IP de la tour de controle
 -------------------------------------------------------------------------------------- */
 getWSOCKIP:
 If Stream(SysVars.fileWSOCK, 'c', 'query exists') \= "" Then Do
@@ -1321,8 +1321,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-      
-   If wsockIPP \= "" Then 
+
+   If wsockIPP \= "" Then
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1474,12 +1474,12 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-            
+
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          Call Main msgCmd
-         
+
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1667,9 +1667,9 @@ if iscOk = 1 then Call ProcUserHook
 
 Return iscOk
 /* =================================================================================== */
-/* Point d'entrée
+/* Point d'entrï¿½e
 
-   Données = msgCmd
+   Donnï¿½es = msgCmd
 
 */
 Main:
@@ -1682,7 +1682,7 @@ If FirstInstance = 0 then do
    Nop
 End
 
-/* Le processus n'a pas été initialisé */
+/* Le processus n'a pas ï¿½tï¿½ initialisï¿½ */
 if ProcessInitialized = 0 then do
    /* Initialisation des variables */
    .
@@ -1691,19 +1691,19 @@ if ProcessInitialized = 0 then do
 End
 
 Select
-   /* Fin du process demandée */
+   /* Fin du process demandï¿½e */
    When msgCmd = SysVars.SysLEnd then do
       .
       .
       .
    End
-   /* Initialisation du process demandée */
+   /* Initialisation du process demandï¿½e */
    When msgCmd = SysVars.SysLInit then do
       .
       .
       .
    End
-   /* Rien à faire ... */
+   /* Rien ï¿½ faire ... */
    When msgCmd = SysVars.SysLIdle then do
       .
       .
@@ -1718,11 +1718,11 @@ Return
 
 
 /***************************************************************************************
-   Prise en charge de certains messages système
+   Prise en charge de certains messages systï¿½me
    --------------------------------------------
 
    msgId    Identifiant du message
-   msgCmd   Commande associée au message
+   msgCmd   Commande associï¿½e au message
 
 ****************************************************************************************/
 ProUserHook:

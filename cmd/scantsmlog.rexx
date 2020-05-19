@@ -3,7 +3,7 @@
                            ==============================
 Ce produit est un graticiel (houla...)
 Ecrit et maintenu par Julien de Sainte Marie
-mailto:julien.desaintemarie@unilog.fr
+mailto:julien.desaintemarie@gmail.com
 
 ****************************************************************************************/
 Parse Arg ProcessName" "Reste
@@ -428,14 +428,14 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-   
+
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then 
+      If Translate(msgData) \= SysVars.SysLEnd Then
          Call QueueData MSG
       Else
          Call PushData MSG
-      
+
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -1242,7 +1242,7 @@ return DdeRc
 
 /* -----------------------------------------------------------------------------------
    monSleep
-      Periode: Durée d'attente exprimée en seconde
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
 -------------------------------------------------------------------------------------- */
 monSleep:
 Trace Off
@@ -1262,7 +1262,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SleepEx
-      Periode: Durée d'attente exprimée en seconde
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
 -------------------------------------------------------------------------------------- */
 SleepEx:
 Trace Off
@@ -1292,8 +1292,8 @@ Return slexRC
 
 /* -----------------------------------------------------------------------------------
    SysSleep
-      Periode: Durée d'attente exprimée en seconde
-      La fonction se réveille si une donnée est dans la file d'attente
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
+      La fonction se rï¿½veille si une donnï¿½e est dans la file d'attente
 -------------------------------------------------------------------------------------- */
 SysSleep:
 Trace Off
@@ -1314,7 +1314,7 @@ Return ssDelay
 
 /* -----------------------------------------------------------------------------------
    SysCls
-      Efacer l'écran
+      Efacer l'ï¿½cran
 -------------------------------------------------------------------------------------- */
 SysCls:
 Trace Off
@@ -1325,7 +1325,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SysFileTree
-      Lister les fichiers d'un répertoire
+      Lister les fichiers d'un rï¿½pertoire
 -------------------------------------------------------------------------------------- */
 SysFileTree:
 Trace Off
@@ -1351,7 +1351,7 @@ Return 0
 
 /* -----------------------------------------------------------------------------------
    getWSOCKIP
-       Récupérer l'adresse IP de la tour de controle
+       Rï¿½cupï¿½rer l'adresse IP de la tour de controle
 -------------------------------------------------------------------------------------- */
 getWSOCKIP:
 Trace Off
@@ -1363,8 +1363,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-      
-   If wsockIPP \= "" Then 
+
+   If wsockIPP \= "" Then
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1472,9 +1472,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-            
+
             Call Main msgCmd
-            
+
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1522,16 +1522,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-            
+
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-         
+
          Call Main msgCmd
-         
+
          Trace Off
-         
+
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1719,32 +1719,32 @@ if iscOk = 1 then Call ProcUserHook
 
 Return iscOk
 /* =================================================================================== */
-/* 
-                                          Analyse des journaux TSM 
+/*
+                                          Analyse des journaux TSM
 */
 Main:
 
 /* Plusieurs images du process sont actives ? */
 If FirstInstance = 0 then do
-   tm = Display("Une autre instance du process est déjà active. Fin de cette instance.")
+   tm = Display("Une autre instance du process est dï¿½jï¿½ active. Fin de cette instance.")
    EndForce = 1
    Return
 End
 
 Select
-   /* Fin du process demandée */
+   /* Fin du process demandï¿½e */
    When msgCmd = SysVars.SysLEnd then do
       Nop
    End
-   /* Initialisation du process demandée */
+   /* Initialisation du process demandï¿½e */
    When msgCmd = SysVars.SysLInit then do
       tm = Display("Initialisation du process en cours.")
-      
+
       tmpfile = "/tmp/scantsmlog.log"
-      
-      tm = Display("Initialisation du process terminée.")
+
+      tm = Display("Initialisation du process terminï¿½e.")
    End
-   /* Rien à faire ... */
+   /* Rien ï¿½ faire ... */
    When msgCmd = SysVars.SysLIdle then do
       Nop
    End
@@ -1765,8 +1765,8 @@ Return
 /****************************************************************************
       ARCHIVEr un journal TSM
       -----------------------
-      
-      
+
+
 syntaxe : archive host=wwwww,file1=xxxxx,file2=yyyyy,target=zzzzz
 
 ****************************************************************************/
@@ -1787,7 +1787,7 @@ ladate_s = date('s')
 
 if serverfile \= "" then do
 	tsf 	= serverfile
-	do while Pos("/",tsf) \= 0 
+	do while Pos("/",tsf) \= 0
 	   parse var tsf asup"/"tsf
 	End
 	if tsf 	= "" then do
@@ -1796,7 +1796,7 @@ if serverfile \= "" then do
 		lastfile = liste.nbfile
 		tsf 	 = lastfile
 		Parse Var tsf "start_backup_prod_"ladate".log"
-		/* on récupère donc [ladate] au format ddmmyyyy */
+		/* on rï¿½cupï¿½re donc [ladate] au format ddmmyyyy */
 		/* on utilise SUBSTR(string, start, [length], [pad]) */
 		annee 	 = SUBSTR(ladate, 5, 4)
 		mois  	 = SUBSTR(ladate, 3, 2)
@@ -1818,13 +1818,13 @@ End
 *****************************************************************/
 if clientfile \= "" then do
 	tcf 	= clientfile
-	do while Pos("/",tcf) \= 0 
+	do while Pos("/",tcf) \= 0
 	   parse var tcf asup"/"tcf
 	End
 	Parse Var tcf tcf"."extension
 	targetfile  = targetdir"/"hostname"_"tcf"_"date('s')"."extension
 	/******************************************************************
-	   la partie ci-dessous est a améliorer car elle ne fonctionne
+	   la partie ci-dessous est a amï¿½liorer car elle ne fonctionne
 	   que si la sauvegarde se finie avant minuit...
 	******************************************************************/
 	Address System "rsh "hostname" grep "ladate_u" "filename" > "targetfile
@@ -1841,8 +1841,8 @@ return
 /********************************************************************************************
       SCANner le log d'une sauvegarde TSM
       -----------------------------------
-      
-      
+
+
 syntaxe : scan hos=xxxxx,inputdir=yyyyy,partname=zzzzz
 
 */
@@ -1866,7 +1866,7 @@ If Stream(filename, 'c', 'query exists' ) \= "" then Do
          ligne = Strip(LineIn(filename))
          Parse Var ligne x_date"   "x_time" "x_reste
 
-         Select 
+         Select
             When Left(x_reste, 28) = "--- SCHEDULEREC STATUS BEGIN" Then Do
                do_display = 1
             End
@@ -1874,27 +1874,27 @@ If Stream(filename, 'c', 'query exists' ) \= "" then Do
                do_display = 0
             End
             OtherWise
-               if do_display = 1 then tm = Display(x_date"-"x_time": "x_reste) 
+               if do_display = 1 then tm = Display(x_date"-"x_time": "x_reste)
          End
       End
       Tm = Stream(tmpfile, 'c', 'close')
-      
-      /* Est-ce que la dernière ligne lue correspond au mode écoute du dsmsched ? */
+
+      /* Est-ce que la derniï¿½re ligne lue correspond au mode ï¿½coute du dsmsched ? */
       if x_reste = "Waiting to be contacted by the server." then
-         tm = Display("Le client TSM a terminé et attend d'être contacté à "x_date"-"x_time)
+         tm = Display("Le client TSM a terminï¿½ et attend d'ï¿½tre contactï¿½ ï¿½ "x_date"-"x_time)
       Else
-         tm = Display("Le client TSM n'a pas terminé la sauvegarde.")
+         tm = Display("Le client TSM n'a pas terminï¿½ la sauvegarde.")
    End
    else
-      tm = Display("Fichier temporaire non créé.")
+      tm = Display("Fichier temporaire non crï¿½ï¿½.")
 End
 return
 
 /************************************************************************************************
       STATistique depUis le log d'une Sauvegarde TSM
       ----------------------------------------------
-      
-      
+
+
 syntaxe : status host=xxxxx,file=yyyyy
 
 */
@@ -1918,15 +1918,15 @@ If Stream(tmpfile, 'c', 'query exists' ) \= "" then Do
       End
       Tm = Stream(tmpfile, 'c', 'close')
       Address System "rm "tmpfile" > /dev/null 2>&1"
-      
-      /* Est-ce que la dernière ligne lue correspond au mode écoute du dsmsched ? */
+
+      /* Est-ce que la derniï¿½re ligne lue correspond au mode ï¿½coute du dsmsched ? */
       if x_reste = "Waiting to be contacted by the server." then
-         tm = Display("Le client TSM a terminé et attend d'être contacté à "x_date"-"x_time)
+         tm = Display("Le client TSM a terminï¿½ et attend d'ï¿½tre contactï¿½ ï¿½ "x_date"-"x_time)
       Else
-         tm = Display("Le client TSM n'a pas terminé la sauvegarde.")
+         tm = Display("Le client TSM n'a pas terminï¿½ la sauvegarde.")
    End
    else
-      tm = Display("Fichier temporaire non créé.")
+      tm = Display("Fichier temporaire non crï¿½ï¿½.")
 End
 return
 
@@ -1938,16 +1938,16 @@ VerifArchive:
 Parse Arg tgf, cetxt
 
 If Stream(tgf, 'c', 'query exists' ) = "" then
-   todsp = "Erreur à la création du fichier "targetfile
+   todsp = "Erreur ï¿½ la crï¿½ation du fichier "targetfile
 Else Do
    If Stream(tgf, 'c', 'query size' ) = 0 then
       todsp = "L'archivage du fichier "tgf" est vide"
    Else Do
       Address System "grep -c '"cetxt"' "tgf WITH OUTPUT STEM test.
       if test.1 > 0 then
-      	todsp = "Fichier archivé sous "tgf
+      	todsp = "Fichier archivï¿½ sous "tgf
       Else
-      	todsp = "le fichier archivé "tgf" est invalide"
+      	todsp = "le fichier archivï¿½ "tgf" est invalide"
    End
 End
 

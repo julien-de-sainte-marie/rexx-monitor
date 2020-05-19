@@ -3,7 +3,7 @@
                            ==============================
 Ce produit est un graticiel (houla...)
 Ecrit et maintenu par Julien de Sainte Marie
-mailto:julien.desaintemarie@unilog.fr
+mailto:julien.desaintemarie@gmail.com
 
 ****************************************************************************************/
 Parse Arg ProcessName" "Reste
@@ -443,14 +443,14 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-   
+
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then 
+      If Translate(msgData) \= SysVars.SysLEnd Then
          Call QueueData MSG
       Else
          Call PushData MSG
-      
+
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -1377,8 +1377,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-      
-   If wsockIPP \= "" Then 
+
+   If wsockIPP \= "" Then
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1486,9 +1486,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-            
+
             Call Main msgCmd
-            
+
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1536,16 +1536,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-            
+
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-         
+
          Call Main msgCmd
-         
+
          Trace Off
-         
+
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1780,7 +1780,7 @@ Return
 Lister:
 
 /***
-   Vider la file d'attente des SYS_ETAT et valoriser l'état des process
+   Vider la file d'attente des SYS_ETAT et valoriser l'ï¿½tat des process
 ***/
 Avant = SetQueue(SysVars.SysEtatQueue)
 nbi   = Queued()
@@ -2004,7 +2004,7 @@ Address SYSTEM 'clear'
 Say "                                  ACTIVITY"
 Say ""
 Say "LOG-Visualiser la LOG du moniteur   DEBUG-Visualiser les messages du moniteur"
-Say "O-Stopper  D-Désactiver  A-Activer  P-Purger   S-Log du process"
+Say "O-Stopper  D-Dï¿½sactiver  A-Activer  P-Purger   S-Log du process"
 Say ""
 Say "Process                                --------------- TIME ---------------"
 Say "                  Queue                Loop Wait CPU              UserProc          Etat"

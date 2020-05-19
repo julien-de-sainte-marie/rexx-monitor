@@ -3,7 +3,7 @@
                            ==============================
 Ce produit est un graticiel (houla...)
 Ecrit et maintenu par Julien de Sainte Marie
-mailto:julien.desaintemarie@unilog.fr
+mailto:julien.desaintemarie@gmail.com
 
 ****************************************************************************************/
 Parse Arg ProcessName" "Reste
@@ -428,14 +428,14 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-   
+
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then 
+      If Translate(msgData) \= SysVars.SysLEnd Then
          Call QueueData MSG
       Else
          Call PushData MSG
-      
+
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -1242,7 +1242,7 @@ return DdeRc
 
 /* -----------------------------------------------------------------------------------
    monSleep
-      Periode: Durée d'attente exprimée en seconde
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
 -------------------------------------------------------------------------------------- */
 monSleep:
 Trace Off
@@ -1262,7 +1262,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SleepEx
-      Periode: Durée d'attente exprimée en seconde
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
 -------------------------------------------------------------------------------------- */
 SleepEx:
 Trace Off
@@ -1292,8 +1292,8 @@ Return slexRC
 
 /* -----------------------------------------------------------------------------------
    SysSleep
-      Periode: Durée d'attente exprimée en seconde
-      La fonction se réveille si une donnée est dans la file d'attente
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
+      La fonction se rï¿½veille si une donnï¿½e est dans la file d'attente
 -------------------------------------------------------------------------------------- */
 SysSleep:
 Trace Off
@@ -1314,7 +1314,7 @@ Return ssDelay
 
 /* -----------------------------------------------------------------------------------
    SysCls
-      Efacer l'écran
+      Efacer l'ï¿½cran
 -------------------------------------------------------------------------------------- */
 SysCls:
 Trace Off
@@ -1325,7 +1325,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SysFileTree
-      Lister les fichiers d'un répertoire
+      Lister les fichiers d'un rï¿½pertoire
 -------------------------------------------------------------------------------------- */
 SysFileTree:
 Trace Off
@@ -1351,7 +1351,7 @@ Return 0
 
 /* -----------------------------------------------------------------------------------
    getWSOCKIP
-       Récupérer l'adresse IP de la tour de controle
+       Rï¿½cupï¿½rer l'adresse IP de la tour de controle
 -------------------------------------------------------------------------------------- */
 getWSOCKIP:
 Trace Off
@@ -1363,8 +1363,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-      
-   If wsockIPP \= "" Then 
+
+   If wsockIPP \= "" Then
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1472,9 +1472,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-            
+
             Call Main msgCmd
-            
+
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1522,16 +1522,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-            
+
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-         
+
          Call Main msgCmd
-         
+
          Trace Off
-         
+
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01

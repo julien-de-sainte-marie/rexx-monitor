@@ -3,7 +3,7 @@
                            ==============================
 Ce produit est un graticiel (houla...)
 Ecrit et maintenu par Julien de Sainte Marie
-mailto:julien.desaintemarie@unilog.fr
+mailto:julien.desaintemarie@gmail.com
 
 ****************************************************************************************/
 Parse Arg ProcessName" "Reste
@@ -443,14 +443,14 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-   
+
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then 
+      If Translate(msgData) \= SysVars.SysLEnd Then
          Call QueueData MSG
       Else
          Call PushData MSG
-      
+
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -1377,8 +1377,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-      
-   If wsockIPP \= "" Then 
+
+   If wsockIPP \= "" Then
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1486,9 +1486,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-            
+
             Call Main msgCmd
-            
+
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1536,16 +1536,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-            
+
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-         
+
          Call Main msgCmd
-         
+
          Trace Off
-         
+
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1734,84 +1734,84 @@ if iscOk = 1 then Call ProcUserHook
 Return iscOk
 /* =================================================================================== */
 /**********************************************************************************************************
-Ce programme détecte la présence de nouveaux fichiers dans un répertoire distant et exécute une action
-sur évènement.
+Ce programme dï¿½tecte la prï¿½sence de nouveaux fichiers dans un rï¿½pertoire distant et exï¿½cute une action
+sur ï¿½vï¿½nement.
 
 **********************************************************************************************************/
 Main:
 Signal On Syntax Name mainErrSyn
 /*
-   Redirection des opérations système vers /dev/null
+   Redirection des opï¿½rations systï¿½me vers /dev/null
 */
 devnull = " > /dev/null 2>&1"
 ftplistLogFile = devnull
 ftpputLogFile = devnull
 
-/*** 
+/***
 ftplistLogFile = ">> log/"SysVars.SysWhoAmI".lstfiles.log 2>&1"
 ftpputLogFile = ">> log/"SysVars.SysWhoAmI".putfiles.log 2>&1"
 ****/
 
 /*
-   msgCmd : variable système contenant le message en provenance du moniteur.
-   
-   Peut être de type système :
-   
+   msgCmd : variable systï¿½me contenant le message en provenance du moniteur.
+
+   Peut ï¿½tre de type systï¿½me :
+
    SysVars.SysLInit = initialisation du programme par le moniteur
-   SysVars.SysLIdle = aucun message à traiter depuis x secondes
-   SysVars.SysLEnd  = le moniteur demande l'arrêt du programme
-   
-   Peut être de type Utilisateur :
-  
+   SysVars.SysLIdle = aucun message ï¿½ traiter depuis x secondes
+   SysVars.SysLEnd  = le moniteur demande l'arrï¿½t du programme
+
+   Peut ï¿½tre de type Utilisateur :
+
   WF action | param=valeur[,param=valeur]
-   
+
    WF                            obligatoire
-   
+
 action
    THROW MSG="message"
-   
+
 param
    NAME=nom                      nom du process
-   ,INITIALIZE=1                 exécute la phase d'initialisation
-   ,TERMINATE=1                  exécute la phase de nettoyage et clôture du scan
-   ,RESET=1                      Variable par défaut
+   ,INITIALIZE=1                 exï¿½cute la phase d'initialisation
+   ,TERMINATE=1                  exï¿½cute la phase de nettoyage et clï¿½ture du scan
+   ,RESET=1                      Variable par dï¿½faut
    ,LOCAL=0 | 1                  0 = fichiers en local, 1 = fichiers via ftp
-   ,SCANPATH=chemin              point d'ancrâge à sureveiller
-   ,CAPTION=texte                texte figurant dans les log (lisibilité) 
-   ,INIFILE=fichier              fichier de paramétrage pour le point d'ancrâge (sur le même système que le process)
+   ,SCANPATH=chemin              point d'ancrï¿½ge ï¿½ sureveiller
+   ,CAPTION=texte                texte figurant dans les log (lisibilitï¿½)
+   ,INIFILE=fichier              fichier de paramï¿½trage pour le point d'ancrï¿½ge (sur le mï¿½me systï¿½me que le process)
    ,FTPUSER=userid               nom d'utilisateur pour le mode LOCAL=0
    ,FTPPASSWORD=pwd | *          password de l'utilisateur
-   ,FTPHOST=hostname             nom du host hébergeant mles fichiers
-   ,TEMPPATH=chemin              chemin d'accès au répertoire temporaire
-   ,ROOTPATH=chemin              chemin d'accès du programme
-   ,SCRIPTPATH=chemin            chemin d'accès aux scripts du guichet
-   ,FILEEXT=mask=phase,...       masque de fichier à traiter sur les phase OnInit et OnRun
+   ,FTPHOST=hostname             nom du host hï¿½bergeant mles fichiers
+   ,TEMPPATH=chemin              chemin d'accï¿½s au rï¿½pertoire temporaire
+   ,ROOTPATH=chemin              chemin d'accï¿½s du programme
+   ,SCRIPTPATH=chemin            chemin d'accï¿½s aux scripts du guichet
+   ,FILEEXT=mask=phase,...       masque de fichier ï¿½ traiter sur les phase OnInit et OnRun
    ,XCHGLISTENERIP=@IP:PORT      adresse ip et port du moniteur de suivi
-      
+
    ex :
    WF name=wf1,inifile=/home/monitor/ini/compta_fr_contrat.ini,local=0
    WF name=wf1,initialize=1
-   
+
 */
 
 Select
 
-   /* Arrêt de process demandé via le moniteur */
-   When msgCmd = SysVars.SysLEnd then 
+   /* Arrï¿½t de process demandï¿½ via le moniteur */
+   When msgCmd = SysVars.SysLEnd then
       Call Arreter
 
-   /* Initialisation du process demandée */
+   /* Initialisation du process demandï¿½e */
    When msgCmd = SysVars.SysLInit then Do
-      If ProcessInitialized = 0 then Do                        /* Pas encore initialisé */
+      If ProcessInitialized = 0 then Do                        /* Pas encore initialisï¿½ */
          lclXchgListenerIP = Strip(GetProfileString("ini/ecouteur.ini", "Global", "XchgListenerIP", "0:0"))
          if lclXchgListenerIP = "0:0" Then
             lclXchgListenerIP = Strip(GetProfileString(,"SYSOUT","WSOCKIP","0:0"))
          if lclXchgListenerIP = "0:0" Then
             lclXchgListenerIP = Value("WSOCKIP",,Share)
-         
-         If SysAddService("ECOUTEUR_MASTER") = 1 Then Do       /* En cas de succès, c'est le premier process de ce nom */
+
+         If SysAddService("ECOUTEUR_MASTER") = 1 Then Do       /* En cas de succï¿½s, c'est le premier process de ce nom */
             Call Display "Master process"                      /* Ce process ne fait rien pour le moment ... */
-            stopedDueToErr    = 0   
+            stopedDueToErr    = 0
             gblProcessName    = ""
             gblCaption        = "Master"
             LockedProcess     = 1
@@ -1824,7 +1824,7 @@ Select
       End
    End
 
-   /* Rien à faire ... */
+   /* Rien ï¿½ faire ... */
    When msgCmd = SysVars.SysLIdle then
       If FirstInstance = 0 Then Call Lister
 
@@ -1841,7 +1841,7 @@ Return
 PgmInitialization:
 Call Display "Children process"
 FirstInstance     = 0
-stopedDueToErr    = 0   
+stopedDueToErr    = 0
 tmpPath           = ""                             /* Initialisation des variables de traitement */
 rootPath          = ""
 scriptPath        = ""
@@ -1876,9 +1876,9 @@ Return
 
 
 /**********************************************************************************************************
-   Le programme tient à jour une liste des fichiers qu'il a déjà traités.
-   
-   TODO: joindre le timestamp pour permettre de traiter deux fois un fichier portant le même nom
+   Le programme tient ï¿½ jour une liste des fichiers qu'il a dï¿½jï¿½ traitï¿½s.
+
+   TODO: joindre le timestamp pour permettre de traiter deux fois un fichier portant le mï¿½me nom
 **********************************************************************************************************/
 estDejaTraite:
 Parse Arg ficN
@@ -1893,29 +1893,29 @@ End
 Return edtRC
 
 /**********************************************************************************************************
-   Traiter ne message utilisateur passé au programme via le moniteur.
-   La première fois qu'un message arrive, le programme n'a pas encore de nom.
+   Traiter ne message utilisateur passï¿½ au programme via le moniteur.
+   La premiï¿½re fois qu'un message arrive, le programme n'a pas encore de nom.
 **********************************************************************************************************/
 Traiter:
 If Translate(Left(msgCmd,3)) \= "WF " Then Return
 
 Parse Var msgCmd dummy" "Reste                                    /* Oter le WF du message */
-Reste = Strip(Reste)                                              /* Enlever les blancs résiduels */
+Reste = Strip(Reste)                                              /* Enlever les blancs rï¿½siduels */
 
 /*
-   Liste des actions 
-   
+   Liste des actions
+
    THROW MSG=message
-   
+
 */
 If Translate(Word(Reste,1)) = "THROW" Then Do
    Parse Var Reste dummy" "isMsg"="pMsg
-   
+
    If Translate(isMsg) = "MSG" Then
       lMsg = pMsg
    Else
       lMsg = "empty message given"
-      
+
    Call ThrowLog lMsg
    Return
 End
@@ -1923,65 +1923,65 @@ End
 /* Leprocess n'a pas encore de nom */
 If gblInitDone = 0 Then Do
    Call Display "Lock exclusive the ECOUTEUR resource"
-   Rc = Lock("WF_"ProcessName, "X")                                  /* Verrouillage exclusif pour être seul */
-   Call Display "Lock exclusive the ECOUTEUR resource acquired"   /* à traiter ce message */
+   Rc = Lock("WF_"ProcessName, "X")                                  /* Verrouillage exclusif pour ï¿½tre seul */
+   Call Display "Lock exclusive the ECOUTEUR resource acquired"   /* ï¿½ traiter ce message */
    isLocked = 1
 End
 
 /*
-   Liste des paramètres
-   
-   Le message peut être composée de plusieurs mots clés.
-   Chaque paramètre sera traité indépendament.
+   Liste des paramï¿½tres
+
+   Le message peut ï¿½tre composï¿½e de plusieurs mots clï¿½s.
+   Chaque paramï¿½tre sera traitï¿½ indï¿½pendament.
    MOTCLE=VALEUR[,suite du message]
 */
 Do while Length(Reste) > 0
    Parse Var Reste Gauche"="Droite","Reste
-   
-   Select 
-   
+
+   Select
+
       When Translate(Gauche) = "NAME" Then Do                           /* Donner un nom au process                  */
-         If gblInitDone = 0 Then Do                                     /* ssi le process n'est pas déjà nomé        */
+         If gblInitDone = 0 Then Do                                     /* ssi le process n'est pas dï¿½jï¿½ nomï¿½        */
             gblProcessName = Translate(Droite)
             Rc             = SysAddService( "WF"gblProcessName )        /* On tente de s'octroyer le nom             */
             If Rc = 1 Then Do                                           /* Ok, on est le premier, on a donc un nom   */
                gblInitDone = 1
                Call Display "Process name is "gblProcessName
-            End 
-            Else Do                                                     /* Un autre process a déjà ce nom            */
+            End
+            Else Do                                                     /* Un autre process a dï¿½jï¿½ ce nom            */
                Reste = ""                                               /* On efface le message et on boucle         */
                Iterate                                                  /* => fin du traitement du message           */
             End
-         End 
-         Else If gblProcessName \= Translate(Droite) Then Do            /* On a déjà un nom, est-ce que c'est le même      */
+         End
+         Else If gblProcessName \= Translate(Droite) Then Do            /* On a dï¿½jï¿½ un nom, est-ce que c'est le mï¿½me      */
             Reste = ""                                                  /* Non, donc ce message n'est pas pour ce process  */
             Iterate                                                     /* On efface le message                            */
          End
       End
-   
-      When Translate(Gauche) = "INITIALIZE" Then Do                     /* A priori, tous les paramètres sont connus */
+
+      When Translate(Gauche) = "INITIALIZE" Then Do                     /* A priori, tous les paramï¿½tres sont connus */
          If gblInitDone > 0 Then Do                                     /* On initialise le traitement du            */
-            Call Display "Detect process initialization"                /* point d'encrâge                           */
+            Call Display "Detect process initialization"                /* point d'encrï¿½ge                           */
             If gblCaption = "" Then gblCaption = gblProcessName
             Call Initialiser
          End
       End
 
-      When Translate(Gauche) = "RESET" Then Do                          /* A priori, tous les paramètres sont connus */
+      When Translate(Gauche) = "RESET" Then Do                          /* A priori, tous les paramï¿½tres sont connus */
          If gblInitDone = 2 Then Do                                     /* On initialise le traitement du            */
-            Call Display "Detect process reset"                         /* point d'encrâge                           */
+            Call Display "Detect process reset"                         /* point d'encrï¿½ge                           */
             Call PgmInitialization
          End
       End
-      
+
       When Translate(Gauche) = "LOCAL" Then Do                          /* Les fichiers sont en local, pas en remote */
          If gblInitDone > 0 Then Do
             gblIsLocal = Strip(Droite)
             Call Display "Local mode for scan is set to "gblIsLocal
          End
       End
-      
-      When Translate(Gauche) = "TERMINATE" | Translate(Gauche) = "FINALIZE" Then Do /* Effacer les paramètres */
+
+      When Translate(Gauche) = "TERMINATE" | Translate(Gauche) = "FINALIZE" Then Do /* Effacer les paramï¿½tres */
          If gblInitDone > 0 Then Do
             Call Display "Detect process finalization"
             Call Arreter
@@ -2001,14 +2001,14 @@ Do while Length(Reste) > 0
             Call Display "Process path to scan is "gblPathScan
          End
       End
-   
+
       When Translate(Gauche) = "CAPTION" Then Do
          If gblInitDone > 0 Then Do
             gblCaption = Strip(Droite)
             Call Display "Process caption is "gblCaption
          End
       End
-   
+
       When Translate(Gauche) = "INIFILE" Then Do
          If gblInitDone > 0 Then Do
             gblIniFile = Strip(Droite)
@@ -2067,30 +2067,30 @@ Do while Length(Reste) > 0
 
       OtherWise
          Call Display "Syntax Error in "Gauche"="Droite""Reste
-   
-   End
-End  
 
-/* Si on a verrouillé la ressouce, on libère le verrou. */
+   End
+End
+
+/* Si on a verrouillï¿½ la ressouce, on libï¿½re le verrou. */
 If isLocked = 1 Then Do
    Call Display "Unlock the ECOUTEUR resource"
    Rc = UnLock("WF_"ProcessName)
    isLocked = 0
 End
 
-/* Un arrêt d'urgence doit être effectué */
+/* Un arrï¿½t d'urgence doit ï¿½tre effectuï¿½ */
 If EndForce > 0 Then Call Arreter
 
 return
 
 /**********************************************************************************************************
-   Rechercher un paramètre dans un fichier de paramètre.
-   Si le paramètre n'a pas de valeur, et qu'auncune valeur par défaut n'est fourni, on arrête le processus
+   Rechercher un paramï¿½tre dans un fichier de paramï¿½tre.
+   Si le paramï¿½tre n'a pas de valeur, et qu'auncune valeur par dï¿½faut n'est fourni, on arrï¿½te le processus
 **********************************************************************************************************/
 ValidateIniParm:
 Parse Arg vipData, vipSection, vipKey, vipDefault
 
-If vipData = "" Then Do   
+If vipData = "" Then Do
    vipDataR = Strip(GetProfileString(gblIniFile, vipSection, vipKey, vipDefault))
    if vipDataR = "" then do
       Call Display gblCaption": iniFile="gblIniFile", Section="vipSection", Param="vipKey" : Not found"
@@ -2099,7 +2099,7 @@ If vipData = "" Then Do
 End
 Else
    vipDataR = vipData
-   
+
 Return vipDataR
 
 /**********************************************************************************************************
@@ -2139,34 +2139,34 @@ If ProcessInitialized = 1 & gblInitDone > 0 Then Do
 
    if Right(tmpPath, 1) \= "/" then tmpPath = tmpPath"/"
    tmpPath = tmpPath""SysVars.SysWhoAmI"/"
-   
-   /* Création du répertoire temporaire */
+
+   /* Crï¿½ation du rï¿½pertoire temporaire */
    Address SYSTEM "mkdir "tmpPath""devnull
 
-   /* Effacer le répertoire au cas où ... */
+   /* Effacer le rï¿½pertoire au cas oï¿½ ... */
    Address SYSTEM "rm -R "tmpPath"*"devnull
-   
-   /* Changer les attributs d'accès au répertoire */
+
+   /* Changer les attributs d'accï¿½s au rï¿½pertoire */
    Address SYSTEM "chmod g=rwx "tmpPath""devnull
 
-   /* Initialiser les extensions de fichier à traiter */
+   /* Initialiser les extensions de fichier ï¿½ traiter */
    lstFExt.0   = 0
    lfe         = 0
    FileExt     = Strip(lstFileExt)
-   
+
    /*
-      Traiter la façon de traiter les extensions de fichier en fonction des arguments :
-      Les données sont stockées dans un tableau dynamique
-      
+      Traiter la faï¿½on de traiter les extensions de fichier en fonction des arguments :
+      Les donnï¿½es sont stockï¿½es dans un tableau dynamique
+
       ex : *.itf=oninit,PARAM*.lst=onrun,ERR*.itf=onrun
-      
+
    */
    Do While Length(FileExt) > 0
       Parse Var FileExt Gauche","Droite
-      
+
       If Length(Gauche) > 0 Then Do
          Parse Var Gauche FileExt"="FileAct
-         
+
          If Length(FileExt) > 0 Then Do
             If Length(FileAct) > 0 Then Do
                lfe                     = lfe + 1
@@ -2209,7 +2209,7 @@ Return
 
 
 /**********************************************************************************************************
-   Générer les fichiers de commandes de listage des répertoires
+   Gï¿½nï¿½rer les fichiers de commandes de listage des rï¿½pertoires
    ftp en remote
    ls  en local
 **********************************************************************************************************/
@@ -2248,25 +2248,25 @@ End
 
 /* Si aucune erreur */
 If EndForce = 0 Then Do
-   
-   /* Effacer les fichiers temporaires et les regénérer */
+
+   /* Effacer les fichiers temporaires et les regï¿½nï¿½rer */
    Address SYSTEM 'rm 'zFile''devnull
    Address SYSTEM 'rm 'pScp''devnull
    Address SYSTEM 'rm 'zFileS''devnull
    Address SYSTEM 'rm 'pScpS''devnull
 
-   /* En mode remote, créer la commande de login ftp */
+   /* En mode remote, crï¿½er la commande de login ftp */
    If gblIsLocal \= "1" Then Do
       Rc = LineOut(zFile,"ftp -i -v "ftpHost" < "pScp)
       Rc = Stream(zFile,'c','close')
    End
-      
-   /* 
+
+   /*
       Ajouter une ligne de listage par extension
-      Vérifier que la phase INIT ou RUN est en rapport avec l'extension
+      Vï¿½rifier que la phase INIT ou RUN est en rapport avec l'extension
    */
    Rc = LineOut(pScp,"cd "gblPathScan)
-      
+
    Do I = 1 to lstFExt.0
       If gblActionIs = Translate(lstFExt.I.Action) Then
          If gblIsLocal \= "1" Then
@@ -2274,13 +2274,13 @@ If EndForce = 0 Then Do
          Else
             Rc = LineOut(pScp,"ls "lstFExt.I.Extension" >> "pLst""I)
    End
-   If gblIsLocal \= "1" Then Rc = LineOut(pScp,"quit")               /* Déconnexion ftp                     */
+   If gblIsLocal \= "1" Then Rc = LineOut(pScp,"quit")               /* Dï¿½connexion ftp                     */
    Rc = Stream(pScp,'c','close')                                                /* Fermer le fichier                   */
-   
+
    If gblIsLocal = "1" Then                                          /* En mode local, pas de ftp mais ls   */
       Address SYSTEM 'mv 'pScp' 'zFile''devnull
 
-   /* En mode remote, créer la commande de login ftp pour la copie de fichiers */
+   /* En mode remote, crï¿½er la commande de login ftp pour la copie de fichiers */
    If gblIsLocal \= "1" Then Do
          Rc = LineOut(zFileS,"ftp -i -v "ftpHost" < "pScpS)
          Rc = Stream(zFileS,'c','close')
@@ -2294,9 +2294,9 @@ End
 Return
 
 /**********************************************************************************************************
-   Arrêt du process ou du scan
+   Arrï¿½t du process ou du scan
    Nettoyage des fichiers temporaires
-   Libérer les ressources systèmes (verrous, nom de service)
+   Libï¿½rer les ressources systï¿½mes (verrous, nom de service)
 **********************************************************************************************************/
 Arreter:
 If FirstInstance = 1 Then Call SysRemoveService "ECOUTEUR_MASTER"
@@ -2328,17 +2328,17 @@ gblInitDone = 1
 Return
 
 /**********************************************************************************************************
-   Liste le contenu d'un répertoire.
+   Liste le contenu d'un rï¿½pertoire.
 **********************************************************************************************************/
 Lister:
 If gblInitDone < 2 then Return
 
 Parse Var gblXchgListenerIP listIP":"listPort
 
-/* Prévenir de l'activité du process */
+/* Prï¿½venir de l'activitï¿½ du process */
    Call ThrowLog "Checking files"
 
-/* Génération des fichiers de scripts de listage */
+/* Gï¿½nï¿½ration des fichiers de scripts de listage */
 Call CheckFile cmdFicIn, scpFicIn, lstFicIn, cmdFicOut, scpFicOut
 If EndForce > 0 Then Do
    Call ThrowLog "ERROR checking files / stop forced"
@@ -2346,18 +2346,18 @@ If EndForce > 0 Then Do
 End
 
 Call ThrowLog "Building list of remote files"
-/*Exécution des commandes */
+/*Exï¿½cution des commandes */
 Address SYSTEM ". "CmdFicIn""ftplistLogFile
 Call ThrowLog "Analyzing list of remote files"
 
-/* Analyse des résultats */
+/* Analyse des rï¿½sultats */
 owName = Strip(GetProfileString(gblIniFile, "Global", "Owner", "guichet.staff"))
 Tuples = 0
-Do I = 1 to lstFExt.0                                                /* Pour chaque extension demandée      */
-   If Stream( lstFicIn""I, 'c', 'query exists' ) \= "" then Do       /* Si un fichier a été produit         */
+Do I = 1 to lstFExt.0                                                /* Pour chaque extension demandï¿½e      */
+   If Stream( lstFicIn""I, 'c', 'query exists' ) \= "" then Do       /* Si un fichier a ï¿½tï¿½ produit         */
       Tm = Stream( lstFicIn""I, 'c', 'open read' )                   /*    l'ouvir                          */
       If Tm = 'READY:' then do
-         Do while Lines( lstFicIn""I ) > 0                           /*    tant qu'il y a des lignes à lire */
+         Do while Lines( lstFicIn""I ) > 0                           /*    tant qu'il y a des lignes ï¿½ lire */
             Tuple = LineIn( lstFicIn""I)                             /*    lire une ligne                   */
             Tuple = Strip( Tuple )
             If Tuple \= "" then Do
@@ -2368,7 +2368,7 @@ Do I = 1 to lstFExt.0                                                /* Pour cha
          End
          Tm = Stream( lstFicIn""I, 'c', 'close' )                    /*    fermer le fichier                */
          Address SYSTEM 'rm 'lstFicIn""I''devnull                    /* Suppression du fichier lu           */
-      End   
+      End
    End
 End
 lstFilesIn.0  = Tuples
@@ -2377,27 +2377,27 @@ cptTraite     = 0
 dspCpt        = 0
 
 /*
-   Pour chaque fichier obtenu par listage, générer un script décrit dans le fichier INI
-   Le script sera exécuté par le gestionnaire
-   Il sera déposé sur le guichet par une commande de copie (ftp ou mv)
+   Pour chaque fichier obtenu par listage, gï¿½nï¿½rer un script dï¿½crit dans le fichier INI
+   Le script sera exï¿½cutï¿½ par le gestionnaire
+   Il sera dï¿½posï¿½ sur le guichet par une commande de copie (ftp ou mv)
 */
 If lstFilesIn.0 > 0 Then Do
    OptCmd = Strip(GetProfileString(gblIniFile, "Actions", gblActionIs, ""))
    If OptCmd \= "" Then maskCmd = Strip(GetProfileString(gblIniFile, OptCmd, "Command", "nop"))
    If maskCmd = "" | Translate(maskCmd) = "NOP" Then
       Nop
-   Else Do 
+   Else Do
       defCmd      = maskCmd
       MvtFile     = ValidateIniParm("", OptCmd, "MvtFile", "$path_log/mouvements")
       ExecCmdBkp  = ValidateIniParm("", OptCmd, "ExecCmd", "ls")
       LogFile     = ValidateIniParm("", OptCmd, "LogFile", "$path_log/")
       DestPath.0  = 0
       DestPath    = Strip(GetProfileString(gblIniFile, OptCmd, "DestPath", ""))
-      
+
       If scpRunRxB = 0 Then Do
          If Left(DestPath, 1) = "*" Then Do
             Parse var DestPath "*," DestPath.0
-            
+
             Do dpI = 1 To DestPath.0
                dpText = Strip(GetProfileString(gblIniFile, OptCmd, "DestPath."dpI, ""))
                Parse Var dpText DestPath.dpI.Cond","DestPath.dpI.Path","DestPath.dpI.Resp
@@ -2414,7 +2414,7 @@ If lstFilesIn.0 > 0 Then Do
             DestPath.2.Resp = ""
          End
       End
-         
+
       Do Tuples = 1 To lstFilesIn.0
          If estDejaTraite(lstFilesIn.Tuples.PathName"/"lstFilesIn.Tuples.sFileName) = 1 Then Do
             cptDejaTraite = cptDejaTraite + 1
@@ -2425,19 +2425,19 @@ If lstFilesIn.0 > 0 Then Do
             dspCpt      = 1
             dpI         = DestPath.0
 
-            /* Découpage du nom du fichier pour valoriser les FileName.x */
+            /* Dï¿½coupage du nom du fichier pour valoriser les FileName.x */
             FileName = lstFilesIn.Tuples.sFileName
-         
+
             if scpRunRxB = 0 Then
-            Do   
+            Do
                Rc  = LineOut(scpRunRx, "/* Programme temporaire */")
                Rc  = LineOut(scpRunRx, "Parse Arg FileName")
-               Rc  = LineOut(scpRunRx, "dpI = 1")          
+               Rc  = LineOut(scpRunRx, "dpI = 1")
                Rc  = LineOut(scpRunRx, "Do While Pos('_', FileName) > 0")
                Rc  = LineOut(scpRunRx, "   Parse Var FileName FileName.dpI'_'FileName")
                Rc  = LineOut(scpRunRx, "   dpI = dpI + 1")
                Rc  = LineOut(scpRunRx, "End")
-                                    
+
                owi = 0
                exi = 0
                Rc  = LineOut(scpRunRx, "exi = 0")
@@ -2458,7 +2458,7 @@ If lstFilesIn.0 > 0 Then Do
                      owi   = 1
                   End
                End
-               
+
                if owi = 0 then
                   if Translate(Left(DestPath.dpI.Path,8)) \= "DESTPATH" then do
                      Rc  = LineOut(scpRunRx, "  Otherwise")
@@ -2466,7 +2466,7 @@ If lstFilesIn.0 > 0 Then Do
                      Rc  = LineOut(scpRunRx, "    RespPath = '"DestPath.dpI.Resp"'")
                      owi   = 1
                    end
-                   Else 
+                   Else
                    Do
                      Rc  = LineOut(scpRunRx, "  Otherwise DestPath=''")
                      owi   = 1
@@ -2482,10 +2482,10 @@ If lstFilesIn.0 > 0 Then Do
             Parse var Result DestPath";"RespPath";"exi
 
             If DestPath \= "" then do
-   
+
                Address SYSTEM "rm "kshFicFull""dwTmstp" "kshFicFull""dwTmstp".top "scpFicOut""devnull
                Address SYSTEM 'wsock 'listIP' 'listPort' "WF 'gblCaption';'lstFilesIn.Tuples.PathName';'lstFilesIn.Tuples.sFileName';'defCmd'='DestPath'/'lstFilesIn.Tuples.sFileName';listing"'Devnull" &"
-      
+
                If Strip(RespPath) \= "" Then Do
                   RespSrv = Strip(GetProfileString(gblIniFile, "Responses", RespPath, ""))
                   Parse Var RespSrv rspServeur","rspLogin","rspPWD","rspPath
@@ -2497,7 +2497,7 @@ If lstFilesIn.0 > 0 Then Do
                   rspPWD      = ""
                   rspPath     = ""
                End
-               
+
                if exi > 0 Then
                   ExecCmd = ValidateIniParm("", OptCmd, "ExecCmd."exi, ExecCmdBkp)
                else
@@ -2522,7 +2522,7 @@ If lstFilesIn.0 > 0 Then Do
                /* Generate topfile */
                Rc = LineOut(kshFicFull""dwTmstp".top","top")
                Rc = Stream(kshFicFull""dwTmstp".top",'c','close')
-      
+
                If gblIsLocal \= "1" Then Do
                   Rc = LineOut(scpFicOut,"cd "scriptPath)
                   Rc = LineOut(scpFicOut,"put "kshFicFull""dwTmstp" "kshFic""dwTmstp)
@@ -2536,23 +2536,23 @@ If lstFilesIn.0 > 0 Then Do
                   Rc = LineOut(scpFicOut,"chown "owName" "scriptPath""kshFic""dwTmstp)
                   Rc = LineOut(scpFicOut,"chown "owName" "scriptPath""kshFic""dwTmstp".top")
               End
-      
+
                Rc = Stream(scpFicOut,'c','close')
-      
-               If gblIsLocal = "1" Then 
+
+               If gblIsLocal = "1" Then
                   Address SYSTEM 'mv 'scpFicOut' 'CmdFicOut /* ''devnull  */
-      
+
                Address SYSTEM ". "CmdFicOut""ftpputLogFile
                /* Address SYSTEM "rm "kshFicFull""dwTmstp" "kshFicFull""dwTmstp".top "scpFicOut""devnull */
 
             End
-               
+
             dwTmstp = dwTmstp + 1
             I = bkpFilesIn.0
             I = I + 1
             bkpFilesIn.0 = I
             bkpFilesIn.I.sFileName = lstFilesIn.Tuples.PathName"/"lstFilesIn.Tuples.sFileName
-         End         
+         End
       End
    End
 End
@@ -2578,7 +2578,7 @@ mainErrSyn:
 Push "SYS_STOP~END"
 stopedDueToErr = 1
 
-Call getWSOCKIP 
+Call getWSOCKIP
 'wsock 'wsockIP' 'wsockPort' "WF 'gblCaption';INTERNAL-ERROR;'Condition('C')'_'Condition('D')';'ERR'='Condition('I')';ABORTING"'Devnull
 Call ThrowLog gblCaption';INTERNAL-ERROR;'Condition('C')'_'Condition('D')';'Condition('I')';KILLING'
 Return

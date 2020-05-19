@@ -3,7 +3,7 @@
                            ==============================
 Ce produit est un graticiel (houla...)
 Ecrit et maintenu par Julien de Sainte Marie
-mailto:julien.desaintemarie@unilog.fr
+mailto:julien.desaintemarie@gmail.com
 
 ****************************************************************************************/
 Parse Arg ProcessName" "Reste
@@ -428,14 +428,14 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-   
+
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then 
+      If Translate(msgData) \= SysVars.SysLEnd Then
          Call QueueData MSG
       Else
          Call PushData MSG
-      
+
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -1242,7 +1242,7 @@ return DdeRc
 
 /* -----------------------------------------------------------------------------------
    monSleep
-      Periode: Durée d'attente exprimée en seconde
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
 -------------------------------------------------------------------------------------- */
 monSleep:
 Trace Off
@@ -1262,7 +1262,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SleepEx
-      Periode: Durée d'attente exprimée en seconde
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
 -------------------------------------------------------------------------------------- */
 SleepEx:
 Trace Off
@@ -1292,8 +1292,8 @@ Return slexRC
 
 /* -----------------------------------------------------------------------------------
    SysSleep
-      Periode: Durée d'attente exprimée en seconde
-      La fonction se réveille si une donnée est dans la file d'attente
+      Periode: Durï¿½e d'attente exprimï¿½e en seconde
+      La fonction se rï¿½veille si une donnï¿½e est dans la file d'attente
 -------------------------------------------------------------------------------------- */
 SysSleep:
 Trace Off
@@ -1314,7 +1314,7 @@ Return ssDelay
 
 /* -----------------------------------------------------------------------------------
    SysCls
-      Efacer l'écran
+      Efacer l'ï¿½cran
 -------------------------------------------------------------------------------------- */
 SysCls:
 Trace Off
@@ -1325,7 +1325,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SysFileTree
-      Lister les fichiers d'un répertoire
+      Lister les fichiers d'un rï¿½pertoire
 -------------------------------------------------------------------------------------- */
 SysFileTree:
 Trace Off
@@ -1351,7 +1351,7 @@ Return 0
 
 /* -----------------------------------------------------------------------------------
    getWSOCKIP
-       Récupérer l'adresse IP de la tour de controle
+       Rï¿½cupï¿½rer l'adresse IP de la tour de controle
 -------------------------------------------------------------------------------------- */
 getWSOCKIP:
 Trace Off
@@ -1363,8 +1363,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-      
-   If wsockIPP \= "" Then 
+
+   If wsockIPP \= "" Then
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1472,9 +1472,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-            
+
             Call Main msgCmd
-            
+
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1522,16 +1522,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-            
+
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-         
+
          Call Main msgCmd
-         
+
          Trace Off
-         
+
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1719,14 +1719,14 @@ if iscOk = 1 then Call ProcUserHook
 
 Return iscOk
 /* =================================================================================== */
-/* 
-                                          Analyse des journaux TSM 
+/*
+                                          Analyse des journaux TSM
 */
 Main:
 
 /* Plusieurs images du process sont actives ? */
 If FirstInstance = 0 then do
-   tm = Display("Une autre instance du process est déjà active. Fin de cette instance.")
+   tm = Display("Une autre instance du process est dï¿½jï¿½ active. Fin de cette instance.")
    EndForce = 1
    Return
 End
@@ -1738,19 +1738,19 @@ if Pos(".", lserveur) \= 0 Then do
 End
 
 Select
-   /* Fin du process demandée */
+   /* Fin du process demandï¿½e */
    When msgCmd = SysVars.SysLEnd then do
       Nop
    End
-   /* Initialisation du process demandée */
+   /* Initialisation du process demandï¿½e */
    When msgCmd = SysVars.SysLInit then do
       tm = Display("Initialisation du process en cours.")
-      
+
       tmpfile = "/tmp/scandal.log"
-      
-      tm = Display("Initialisation du process terminée.")
+
+      tm = Display("Initialisation du process terminï¿½e.")
    End
-   /* Rien à faire ... */
+   /* Rien ï¿½ faire ... */
    When msgCmd = SysVars.SysLIdle then do
       Nop
    End
@@ -1772,15 +1772,15 @@ Return
 /*****************************************************************************************************************
       ARCHIVEr un journal TSM
       -----------------------
-      
+
 syntaxe    : arch host=wwwww,file1=xxxxx,file2=yyyyy,target=zzzzz
 objectif   : trouver, trier et archiver tout ou partie du(des) journal(ux)
-             généré(s) pendant la sauvegarde d'un hôte défini.
+             gï¿½nï¿½rï¿½(s) pendant la sauvegarde d'un hï¿½te dï¿½fini.
 
 *****************************************************************************************************************/
 doArch:
 /* Trace I */
-/* Récupération des arguments ***********************************************************************************/
+/* Rï¿½cupï¿½ration des arguments ***********************************************************************************/
 Parse Var msgCmd x_cmd" "x_host","x_file1","x_file2","x_target
 Parse Var x_host p_host"="hostname
 Parse Var x_file1 p_file1"="serverfile
@@ -1788,7 +1788,7 @@ Parse Var x_file2 p_file2"="clientfile
 say clientfile
 Parse var x_target p_target"="targetdirS
 
-/* déclaration et construction de variables *********************************************************************/
+/* dï¿½claration et construction de variables *********************************************************************/
 serveur=hostname
 if Pos(".", serveur) \= 0 Then do
    Parse var serveur serveur"."reste
@@ -1803,21 +1803,21 @@ ladate_s = date('s')
 *****************************************************************************************************************/
 if serverfile \= "" then do
    tsf       = serverfile
-   do while Pos("/",tsf) \= 0 
+   do while Pos("/",tsf) \= 0
       parse var tsf asup"/"tsf
    End
    tsfName = ""
-   
+
    if tsf  = "" then do
       Address System "rsh "hostname" ls -tr "serverfile" | grep -v zip" WITH OUTPUT STEM liste.
-      
+
       nbfile   = liste.0
       lastfile = liste.nbfile
       tsfName  = lastfile
-      
+
       Parse Var tsfName "start_backup_prod_"ladate".log"
-      
-      /* on récupère donc [ladate] au format ddmmyyyy */
+
+      /* on rï¿½cupï¿½re donc [ladate] au format ddmmyyyy */
       /* on utilise SUBSTR(string, start, [length], [pad]) */
       annee       = SUBSTR(ladate, 5, 4)
       mois        = SUBSTR(ladate, 3, 2)
@@ -1825,7 +1825,7 @@ if serverfile \= "" then do
       ladate_u    = mois"/"jour"/"SUBSTR(annee, 3, 2)   /* format mm/dd/yy */
       ladate_s    = annee""mois""jour                   /* format aaaammdd */
    End
-   
+
    tsfWhole    = serverfile""tsfName
    rControl = 0
    If rControl    = 0 Then do
@@ -1844,18 +1844,18 @@ End
 *****************************************************************************************************************/
 if clientfile \= "" then do
    tcfName = clientfile
-   do while Pos("/",tcfName) \= 0 
+   do while Pos("/",tcfName) \= 0
       parse var tcfName asup"/"tcfName
    End
-   
+
    Parse Var tcfName tcfVorName"."extension
    targetfile2   = targetdirC"/"serveur"_"tcfVorName"_"date('s')
-   
+
    /***************************************************************************************************************
-   la partie ci-dessous est a améliorer car, POUR SIGTSM, elle ne fonctionne que si la sauvegarde se finie
-   avant minuit... + Vérifier aussi que dans la recherche, la date apparaisse en début de ligne et pas en fin...
+   la partie ci-dessous est a amï¿½liorer car, POUR SIGTSM, elle ne fonctionne que si la sauvegarde se finie
+   avant minuit... + Vï¿½rifier aussi que dans la recherche, la date apparaisse en dï¿½but de ligne et pas en fin...
    ***************************************************************************************************************/
-   
+
    Address System "rsh "hostname" grep '"ladate_u"   ' "clientfile" > "targetfile2
    todsp    = VerifArchive( targetfile2, "SCHEDULEREC QUERY BEGIN" )
    Tm      = Display("#>BILAN ARCHIVAGE de "tcfName" depuis "serveur)
@@ -1866,29 +1866,29 @@ return
 /******************************************************************************************************************
       SCANner le log d'une sauvegarde TSM
       -----------------------------------
-      
+
 syntaxe    : scan host=xxxxx,inputdir=yyyyy,partnames=zzzzz[,date=jjmm[aaaa]]
-objectif   : fournir un bilan rapide du journal de sauvegarde à analyser.
-        + sauvegarde réussie = oui/non
-        + durée de la sauvegarde
-        + volumetrie sauvegardée
+objectif   : fournir un bilan rapide du journal de sauvegarde ï¿½ analyser.
+        + sauvegarde rï¿½ussie = oui/non
+        + durï¿½e de la sauvegarde
+        + volumetrie sauvegardï¿½e
         + afficher message : "plus d'infos, tappez : stats hostname ddmmyyyy"
 *******************************************************************************************************************/
 doScan:
 /* trace i */
 Select
    When Pos("host=", msgCmd) = 0 Then Do
-      Tm = DISPLAY("ERREUR SYNTAXE : commande doit être :")
+      Tm = DISPLAY("ERREUR SYNTAXE : commande doit ï¿½tre :")
       Tm = DISPLAY("q scandal scan host=xxxxx,inputdir=yyyyy,partnames=zzzzz[,date=jjmm[aaaa]]")
       return
    End
    When Pos("inputdir=", msgCmd) = 0 Then Do
-      Tm = DISPLAY("ERREUR SYNTAXE : commande doit être :")
+      Tm = DISPLAY("ERREUR SYNTAXE : commande doit ï¿½tre :")
       Tm = DISPLAY("q scandal scan host=xxxxx,inputdir=yyyyy,partnames=zzzzz[,date=jjmm[aaaa]]")
-      return      
+      return
    End
    When Pos("partnames=", msgCmd) = 0 Then Do
-      Tm = DISPLAY("ERREUR SYNTAXE : commande doit être :")
+      Tm = DISPLAY("ERREUR SYNTAXE : commande doit ï¿½tre :")
       Tm = DISPLAY("q scandal scan host=xxxxx,inputdir=yyyyy,partnames=zzzzz[,date=jjmm[aaaa]]")
       return
    End
@@ -1910,7 +1910,7 @@ If Pos(",date", msgCmd) \= 0 then Do
             aaaa = SUBSTR(date('s'), 1, 4)
          End
          OtherWise Do
-         Tm = DISPLAY("ERREUR SYNTAXE : date="w_date" erronée. Doit être : date=jjmm[aaaa]")
+         Tm = DISPLAY("ERREUR SYNTAXE : date="w_date" erronï¿½e. Doit ï¿½tre : date=jjmm[aaaa]")
          return
          End
       End
@@ -1918,7 +1918,7 @@ If Pos(",date", msgCmd) \= 0 then Do
       jour_E = jj"/"mm"/"aaaa
    End
    Else Do
-      Tm = DISPLAY("ERREUR SYNTAXE : date="w_date" erronée. Doit être : date=jjmm[aaaa]")
+      Tm = DISPLAY("ERREUR SYNTAXE : date="w_date" erronï¿½e. Doit ï¿½tre : date=jjmm[aaaa]")
       return
    End
 End
@@ -1932,17 +1932,17 @@ Parse Var y_indir p_indir"="inputdir
 Parse Var z_pname p_pname"="partnames
 Select
    When Length(hostname) = 0 Then Do
-      Tm = DISPLAY("ERREUR SYNTAXE : commande doit être :")
+      Tm = DISPLAY("ERREUR SYNTAXE : commande doit ï¿½tre :")
       Tm = DISPLAY("q scandal scan host=xxxxx,inputdir=yyyyy,partnames=zzzzz[,date=jjmm[aaaa]]")
       return
    End
    When Length(inputdir) = 0 Then Do
-      Tm = DISPLAY("ERREUR SYNTAXE : commande doit être :")
+      Tm = DISPLAY("ERREUR SYNTAXE : commande doit ï¿½tre :")
       Tm = DISPLAY("q scandal scan host=xxxxx,inputdir=yyyyy,partnames=zzzzz[,date=jjmm[aaaa]]")
-      return      
+      return
    End
    When Length(partnames) = 0 Then Do
-      Tm = DISPLAY("ERREUR SYNTAXE : commande doit être :")
+      Tm = DISPLAY("ERREUR SYNTAXE : commande doit ï¿½tre :")
       Tm = DISPLAY("q scandal scan host=xxxxx,inputdir=yyyyy,partnames=zzzzz[,date=jjmm[aaaa]]")
       return
    End
@@ -1951,15 +1951,15 @@ Select
 End
 
 
-/* déclaration et construction de variables & Initialisation de variables *****************************************/
+/* dï¿½claration et construction de variables & Initialisation de variables *****************************************/
 serveur    = hostname
 if Pos(".", serveur) \= 0 then
    Parse var serveur serveur"."reste
 
 
 info.serveur.1    = ""                                            /* on y stockera info si sauvegarde ok = Y/N    */
-info.serveur.2    = ""                                            /* on y stockera info sur durée de sauvegarde   */
-info.serveur.3    = ""                                            /* on y stockera info sur volume sauvegardé     */
+info.serveur.2    = ""                                            /* on y stockera info sur durï¿½e de sauvegarde   */
+info.serveur.3    = ""                                            /* on y stockera info sur volume sauvegardï¿½     */
 
 maxtest.serveur.111 = 0
 test.serveur.111 = 0
@@ -1969,8 +1969,8 @@ maxtest.serveur.113 = 0
 test.serveur.113 = 0
 maxtest.serveur.211 = 0
 test.serveur.211 = 0
-maxtest.serveur.212 = 0 
-test.serveur.212 = 0     
+maxtest.serveur.212 = 0
+test.serveur.212 = 0
 
 Address System "hostname | cut -f '1' -d '.'" WITH OUTPUT STEM lserv.
 localserv = lserv.1
@@ -2002,18 +2002,18 @@ Do n=1 to i
          /* RECHERCHE 11   : LA SAUVEGARDE A-T'ELLE REUSSIE ?
             test111        : trouver ligne :
                            : mm/dd/yy"   "heure" "Scheduled event '[baratin]' completed successfully.
-            position111    : n'importe où
-            RESULTATs      : si réussie   : test111 = 1
-                           : si échouée   : test111 = 0
+            position111    : n'importe oï¿½
+            RESULTATs      : si rï¿½ussie   : test111 = 1
+                           : si ï¿½chouï¿½e   : test111 = 0
          */
             Address System "grep 'Scheduled event' "cefich.1" | grep -ch 'completed successfully'" WITH OUTPUT STEM test111.
             If test111.1 \= 0 then Do
                test.serveur.111 = 1
-               msg.serveur.111 = "OK : Présence phrase 'Scheduled event '...' completed successfully'."
+               msg.serveur.111 = "OK : Prï¿½sence phrase 'Scheduled event '...' completed successfully'."
             End
             Else Do
                test.serveur.111 = 0
-               msg.serveur.111 = "KO : Présence phrase 'Scheduled event '...' completed successfully'."
+               msg.serveur.111 = "KO : Prï¿½sence phrase 'Scheduled event '...' completed successfully'."
             End
             maxtest.serveur.111 = 1
             If ViewdoScan = 1 then Do
@@ -2021,13 +2021,13 @@ Do n=1 to i
                say entete""msg.serveur.111
             End
 /*DEBUG-  say "test."serveur".111 = "test.serveur.111    */
-            
+
          /* test112        : trouver ligne avec "Waiting to be contacted by the server."
-            etape1121      : définir sa position si elle existe.
+            etape1121      : dï¿½finir sa position si elle existe.
                            : si existe pas   : valeur = 0
                            : si existe   : poursuivre
             etape1122      : trouver le nombre de ligne du fichier.
-            etape1123      : comparer à la position définie à l'etape1_1_2_1
+            etape1123      : comparer ï¿½ la position dï¿½finie ï¿½ l'etape1_1_2_1
             RESULTATS      : si =         : test112 = 2
                            : si \=        : test112 = 1
          */
@@ -2037,43 +2037,43 @@ Do n=1 to i
 /*DEBUG-     say "etape."serveur".1121 = "etape.serveur.1121   */
                If test1121 \= 0 then Do
                   Address System "wc -l "cefich.1" | awk '{print $1}'" WITH OUTPUT STEM etape1122.
-                  if etape1122.0 \= 0 then etape.serveur.1122 = etape1122.1     
+                  if etape1122.0 \= 0 then etape.serveur.1122 = etape1122.1
 /*DEBUG-        say "etape."serveur".1122 = "etape.serveur.1122   */
                   If etape.serveur.1122 = etape.serveur.1121 then Do
-                     test.serveur.112 = 2   /* phrase existe en dernière ligne       */
-                     msg.serveur.112 = "OK : Présence phrase 'Waiting to be contacted by the server'."
+                     test.serveur.112 = 2   /* phrase existe en derniï¿½re ligne       */
+                     msg.serveur.112 = "OK : Prï¿½sence phrase 'Waiting to be contacted by the server'."
                   End
                   Else Do
                      test.serveur.112 = 1
-                     msg.serveur.112 = "PB : Présence phrase 'Waiting to be contacted by the server' mais pas en dernière ligne."
+                     msg.serveur.112 = "PB : Prï¿½sence phrase 'Waiting to be contacted by the server' mais pas en derniï¿½re ligne."
                   End
                End
             End
             Else Do
                test.serveur.112 = 0
-               msg.serveur.112 = "KO : Présence phrase 'Waiting to be contacted by the server'."
+               msg.serveur.112 = "KO : Prï¿½sence phrase 'Waiting to be contacted by the server'."
             End
             maxtest.serveur.112 = 2
             If ViewdoScan = 1 then Do
-               Tm = DISPLAY(entete""msg.serveur.112)    
+               Tm = DISPLAY(entete""msg.serveur.112)
                say entete""msg.serveur.112
-            End  
+            End
 /*DEBUG-  say "test."serveur".112 = "test.serveur.112    */
-                   
-         /* test113        : vérifier si tous volumes qui devaient être sauvegardés l'ont été,
-                           : et définir (comme ça en passant) la durée de sauvegarde pour chaque
-                           : volume.                           
-            etape1131      : obtenir la liste des volumes à sauvegarder par       
+
+         /* test113        : vï¿½rifier si tous volumes qui devaient ï¿½tre sauvegardï¿½s l'ont ï¿½tï¿½,
+                           : et dï¿½finir (comme ï¿½a en passant) la durï¿½e de sauvegarde pour chaque
+                           : volume.
+            etape1131      : obtenir la liste des volumes ï¿½ sauvegarder par
                            : grep "Incremental backup of volume" [fichier] | awk '{print $7}'
-                           : compter nombre de volume à sauvegarder = etape1131.0
+                           : compter nombre de volume ï¿½ sauvegarder = etape1131.0
             etape1132      : pour chaque '/--' si on a une ligne "Successful incremental backup of '/--'" ?
-                           : avec la commande 
+                           : avec la commande
                            : "grep "etape1131.x" "cefich.1" | grep 'Successful incremental backup of ' | awk '{print $2}'"
                            : stocker l'heure de fin de sauvegarde,
-                           : x variant de 1 à etape1131.0
-            etape1133      : compter nombre de volume sauvegardés
+                           : x variant de 1 ï¿½ etape1131.0
+            etape1133      : compter nombre de volume sauvegardï¿½s
             RESULTATs      : si etape1132 = etape1131.0   : test113 = 1 & msg113 = ""
-                           : si etape1132 \= etape1131.0   : test113 = 0 & msg113 = rapport volumes non sauvegardés / volumes a sauvegarder        
+                           : si etape1132 \= etape1131.0   : test113 = 0 & msg113 = rapport volumes non sauvegardï¿½s / volumes a sauvegarder
          */
             Address System "grep 'Incremental backup of volume' "cefich.1" | awk '{print $7}'" WITH OUTPUT STEM etape1131.
 /*DEBUG-  say "etape1131.0 = "etape1131.0       */
@@ -2089,24 +2089,24 @@ Do n=1 to i
                End
                If etape.serveur.1133 = etape.serveur.1131 then Do
                   test.serveur.113  = 1
-                  msg.serveur.113 = "OK : "etape.serveur.1133" volumes sauvegardés / "etape.serveur.1131
+                  msg.serveur.113 = "OK : "etape.serveur.1133" volumes sauvegardï¿½s / "etape.serveur.1131
                End
                Else Do
                      test.serveur.113 = 0
-                     msg.serveur.113 = "KO : "etape.serveur.1133" volumes sauvegardés / "etape.serveur.1131
+                     msg.serveur.113 = "KO : "etape.serveur.1133" volumes sauvegardï¿½s / "etape.serveur.1131
                End
                maxtest.serveur.113 = 1
                If ViewdoScan = 1 then Do
                   Tm = DISPLAY(entete""msg.serveur.113)
                   say entete""msg.serveur.113
                End
-/*DEBUG-     say "test."serveur".113 = "test.serveur.113       */ 
-            
+/*DEBUG-     say "test."serveur".113 = "test.serveur.113       */
+
          /* RECHERCHE 12   : DUREE DE LA SAUVEGARDE
-            test121        : (durée sauvegarde complète) trouver ligne 
-                           : mm/dd/yy"   "heure" "Elapsed processing time:           "hh:mm:ss                
-            position121    : n'importe où
-            RESULTATs      : test121 = hh:mm:ss    = durée de la sauvegarde                     
+            test121        : (durï¿½e sauvegarde complï¿½te) trouver ligne
+                           : mm/dd/yy"   "heure" "Elapsed processing time:           "hh:mm:ss
+            position121    : n'importe oï¿½
+            RESULTATs      : test121 = hh:mm:ss    = durï¿½e de la sauvegarde
          */
                Address System "grep 'Elapsed processing time:' "cefich.1" | awk '{print $6}'" WITH OUTPUT STEM test121.
                If test121.0 \= "" then Do
@@ -2115,28 +2115,28 @@ Do n=1 to i
                   stest.serveur.121 = hh.serveur.121*3600 + mm.serveur.121*60 + ss.serveur.121
                   stest.serveur.121.MAXI = 6*3600
                   If stest.serveur.121.MAXI >= stest.serveur.121 then Do
-                     msg.serveur.121 = "OK : Durée de la sauvegarde = "test.serveur.121" < à fenêtre de 6h00."
+                     msg.serveur.121 = "OK : Durï¿½e de la sauvegarde = "test.serveur.121" < ï¿½ fenï¿½tre de 6h00."
                   End
                   Else Do
-                     msg.serveur.121 = "PB : Durée de la sauvegarde = "test.serveur.121" > à fenêtre de 6h00."
+                     msg.serveur.121 = "PB : Durï¿½e de la sauvegarde = "test.serveur.121" > ï¿½ fenï¿½tre de 6h00."
                   End
                End
                Else Do
                   test.serveur.121 = "n/d"
-                  msg.serveur.121 = "PB : Durée de la sauvegarde = non définissable."
+                  msg.serveur.121 = "PB : Durï¿½e de la sauvegarde = non dï¿½finissable."
                End
                If ViewdoScan = 1 then Do
                   Tm = DISPLAY(entete""msg.serveur.121)
                   say entete""msg.serveur.121
                End
 /*DEBUG-     say "DUREE de sauvegarde : test."serveur".121 = "test.serveur.121       */
-                      
-         /* test122        : (durée sauvegarde de chaque volume)
-            etape1221      : trouver heure début de sauvegarde du premier volume, avec la commande
+
+         /* test122        : (durï¿½e sauvegarde de chaque volume)
+            etape1221      : trouver heure dï¿½but de sauvegarde du premier volume, avec la commande
                            : grep -h "ANS1898I" [fichier] | head -n 1 | tail -n 1 | awk '{print$2}'
                            : stocker dans etape1131.1
             s/etape1222    : convertir les heures en secondes
-            s/etape1223    : faire la différence avec les heures de fin
+            s/etape1223    : faire la diffï¿½rence avec les heures de fin
             RESULTATs      : test122.x = etape1131.x+1 - etape1131.x
          */
                Address System "grep -h 'ANS1898I' "cefich.1" | head -n 1 | tail -n 1 | awk '{print$2}'" WITH OUTPUT STEM etape1221.
@@ -2164,59 +2164,59 @@ Do n=1 to i
                      etape.serveur.1223.x = "n/a"
                      Ajout122 = "KO = "
                   End
-                  msg.serveur.122.x = Ajout122"Durée de sauvegarde du volume "etape.serveur.1131.x" = "etape.serveur.1223.x
+                  msg.serveur.122.x = Ajout122"Durï¿½e de sauvegarde du volume "etape.serveur.1131.x" = "etape.serveur.1223.x
                   If ViewdoScan = 1 then Do
                      Tm = DISPLAY(entete""msg.serveur.122.x)
                      say entete""msg.serveur.122.x
                   End
                End
-         
-         /* RECHERCHE 13      : volumetrie sauvegardée                                     
+
+         /* RECHERCHE 13      : volumetrie sauvegardï¿½e
                test131        : trouver ligne mm/dd/yy"   "heure" "Total number of bytes transferred:    "volumetrie
-               position131    : n'importe où
-               RESULTATs      : test131 = volumetrie (ex:146,5 GB) = volumetrie sauvegardée
+               position131    : n'importe oï¿½
+               RESULTATs      : test131 = volumetrie (ex:146,5 GB) = volumetrie sauvegardï¿½e
          */
                Address System "grep 'Total number of bytes transferred:' "cefich.1" | awk '{print $8" "$9}'" WITH OUTPUT STEM test131.
                if test131.0 \= 0 then test.serveur.131 = test131.1
 /*DEBUG-     say "test."serveur".131 = "test.serveur.131          */
             End
             Else Do
-               /* 
-               On prend ici, en compte le cas où la commande :
+               /*
+               On prend ici, en compte le cas oï¿½ la commande :
                "grep 'Incremental backup of volume' "cefich.1" | awk '{print $7}'"
-               ne renvoie aucunes correspondances. On défini d'une autre façon les variables :
+               ne renvoie aucunes correspondances. On dï¿½fini d'une autre faï¿½on les variables :
                   test113
                   test121
                   test131
                */
                /*
                   RECHERCHE 11   : LA SAUVEGARDE A-T'ELLE REUSSIE :
-                     test111     : défini plus haut
-                     test112     : défini plus haut 
-                     test113     : ZERO volumes à sauvegarder."   
+                     test111     : dï¿½fini plus haut
+                     test112     : dï¿½fini plus haut
+                     test113     : ZERO volumes ï¿½ sauvegarder."
                                  : pas utile ici      : test113 = -1
                */
                test.serveur.113 = -1
                maxtest.serveur.113 = -1
 /*DEBUG-     say "test."serveur".113 inutile ici donc = "test.serveur.113      */
-               
+
                /* DEBUT MODIFICATION "M1a" : ESAU - DATE : 17.09.2004
-                  MOTIF : bug si présence de plusieurs séquences infructueuses :
+                  MOTIF : bug si prï¿½sence de plusieurs sï¿½quences infructueuses :
                         "Querying server for next scheduled event."
-                        .... (pas d'information de durée de sauvegarde) ...
+                        .... (pas d'information de durï¿½e de sauvegarde) ...
                         "Waiting to be contacted by the server."
-                        avant la présence d'une séquence contenant les informations de durée de sauvegarde.
-                  ISSUE : si on ne peut pas déterminer de durée de sauvegarde
-                        m1in  : fichier d'entrée = cefich.1
+                        avant la prï¿½sence d'une sï¿½quence contenant les informations de durï¿½e de sauvegarde.
+                  ISSUE : si on ne peut pas dï¿½terminer de durï¿½e de sauvegarde
+                        m1in  : fichier d'entrï¿½e = cefich.1
                         m1out : fichier de sortie temporaire = m1out[x]
                         m1_1  : on cherche la position de la ligne "Querying server for next scheduled event."
                         tant que m1_1 > 0, alors
                            m1a2  : on cherche le nb de ligne du fichier
-                           m1a2  : on en déduit le nouveau nb de ligne fichier (à créer) = m1a2 - m1a1
-                           m1a3  : on copie les m1_2 dernières lignes du fichier [m1ain] dans un fichier temporaire [m1aout]
-                                 : on recherche la durée de sauvegarde : cf. test121
-                           si durée non trouvée, on boucle
-                           si durée déterminée, on quite  (m1a1 = 0)                      
+                           m1a2  : on en dï¿½duit le nouveau nb de ligne fichier (ï¿½ crï¿½er) = m1a2 - m1a1
+                           m1a3  : on copie les m1_2 derniï¿½res lignes du fichier [m1ain] dans un fichier temporaire [m1aout]
+                                 : on recherche la durï¿½e de sauvegarde : cf. test121
+                           si durï¿½e non trouvï¿½e, on boucle
+                           si durï¿½e dï¿½terminï¿½e, on quite  (m1a1 = 0)
                */
                m1a1 = 1
                m1acount = 1
@@ -2235,7 +2235,7 @@ Do n=1 to i
                      Address System "tail -n "m1a2" "m1ain" > "m1aout
                      /*
                      RECHERCHE 12   : DUREE DE LA SAUVEGARDE
-                        test121     : faire la différence entre heure début et heure fin
+                        test121     : faire la diffï¿½rence entre heure dï¿½but et heure fin
                         etape121    : trouver phrase "SCHEDULEREC QUERY BEGIN" par la commande
                                     : grep "SCHEDULEREC QUERY BEGIN" [fichier] | awk '{print $2}'
                                     : renvoi normalement deux valeurs
@@ -2259,18 +2259,18 @@ Do n=1 to i
                         test.serveur.121  = BonFormat(H.serveur.121,2)":"BonFormat(M.serveur.121,2)":"BonFormat(S.serveur.121,2)
                         stest.serveur.121.MAXI = 2*3600
                         If stest.serveur.121.MAXI >= stest.serveur.121 Then Do
-                           msg.serveur.121 = "OK : Durée de sauvegarde = "test.serveur.121" < à fenêtre de 2h00."
+                           msg.serveur.121 = "OK : Durï¿½e de sauvegarde = "test.serveur.121" < ï¿½ fenï¿½tre de 2h00."
                            m1a1 = 0
                         End
                         Else Do
-                           msg.serveur.121 = "PB : Durée de sauvegarde = "test.serveur.121" > à fenêtre de 2h00."
+                           msg.serveur.121 = "PB : Durï¿½e de sauvegarde = "test.serveur.121" > ï¿½ fenï¿½tre de 2h00."
                            m1a1 = 0
                         End
-/*DEBUG-        say "   : Durée de sauvegarde : test."serveur".121 = "test.serveur.121          */
+/*DEBUG-        say "   : Durï¿½e de sauvegarde : test."serveur".121 = "test.serveur.121          */
                      End
                      If etape.serveur.121 < 2 Then Do
                         test.serveur.121 = "n/d"
-                        msg.serveur.121 = "PB : Durée de sauvegarde = non définissable."
+                        msg.serveur.121 = "PB : Durï¿½e de sauvegarde = non dï¿½finissable."
                         m1a1 = 0
                      End
                      If etape.serveur.121 > 2 then Do
@@ -2282,7 +2282,7 @@ Do n=1 to i
                   End
                   Else Do
                      test.serveur.121 = "n/d"
-                     msg.serveur.121 = "PB : Durée de sauvegarde = non définissable."
+                     msg.serveur.121 = "PB : Durï¿½e de sauvegarde = non dï¿½finissable."
                      m1a1 = 0
                   End
                End
@@ -2294,29 +2294,29 @@ Do n=1 to i
                End
                /* FIN MODIFICATION "M1" : ESAU */
 
-               /*                                   
+               /*
                   RECHERCHE 13   : VOLUMETRIE SAUVEGARDEE
-                     test131     : pas définissable   : test131 = -1
+                     test131     : pas dï¿½finissable   : test131 = -1
                */
                test.serveur.131 = -1
-/*DEBUG-     say "test131 indéfinissable ici donc = "test.serveur.131      */
+/*DEBUG-     say "test131 indï¿½finissable ici donc = "test.serveur.131      */
             End
          End
-         
+
          /* DEBUT - CAS 2 = ANALYSER FICHIER LOG DE TYPE 'backup_prod'     */
          When fich.n = Cas2 Then Do
-         /* RECHERCHE 21   : LA SAUVEGARDE A-T'ELLE REUSSIE                                    
+         /* RECHERCHE 21   : LA SAUVEGARDE A-T'ELLE REUSSIE
                test211     : trouver ligne "Sauvegarde completee avec succes"
-               position211 : dernière ligne
+               position211 : derniï¿½re ligne
          */
                Address System "grep 'Sauvegarde completee avec succes' "cefich.1 WITH OUTPUT STEM test211.
                If test211.0 \= 0 then Do
                   test.serveur.211 = 1
-                  msg.serveur.211 = "OK : Présence phrase 'Sauvegarde completee avec succes'."
+                  msg.serveur.211 = "OK : Prï¿½sence phrase 'Sauvegarde completee avec succes'."
                End
                Else Do
                   test.serveur.211 = 0
-                  msg.serveur.211 = "KO : Présence phrase 'Sauvegarde completee avec succes'."
+                  msg.serveur.211 = "KO : Prï¿½sence phrase 'Sauvegarde completee avec succes'."
                End
                maxtest.serveur.211 = 1
                If ViewdoScan = 1 then Do
@@ -2324,18 +2324,18 @@ Do n=1 to i
                   say entete""msg.serveur.211
                End
 /*DEBUG-     say "test."serveur".211 = "test.serveur.211          */
-                                          
+
          /*    test212     : compter le nombre d'erreurs, par la commande
-                           : grep -i -p -c -h " error " [fichier] 2> /dev/null   
+                           : grep -i -p -c -h " error " [fichier] 2> /dev/null
          */
                Address System "grep -i -p -c -h ' error ' "cefich.1" 2> /dev/null" WITH OUTPUT STEM test212.
                If test212.1 = 0 then Do
                   test.serveur.212 = 1
-                  msg.serveur.212 = "OK : "test212.1" message(s) 'error' trouvé(s)."
+                  msg.serveur.212 = "OK : "test212.1" message(s) 'error' trouvï¿½(s)."
                End
                Else Do
                   test.serveur.212 = 0
-                  msg.serveur.212 = "KO : "test212.1" message(s) 'error' trouvé(s)."
+                  msg.serveur.212 = "KO : "test212.1" message(s) 'error' trouvï¿½(s)."
                End
                maxtest.serveur.212 = 1
                If ViewdoScan = 1 then Do
@@ -2343,7 +2343,7 @@ Do n=1 to i
                   say entete""msg.serveur.212
                End
 /*DEBUG-     say "test."serveur".212 = "test.serveur.212          */
-               
+
          /*    test213     : lister les erreurs 'si on veut avoir la liste plus tard', par la commande
                            : grep -n -i -p -h " error " [fichier] 2> /dev/null
          */
@@ -2365,7 +2365,7 @@ Do n=1 to i
          OtherWise do
             Nop
          End
-         
+
       End
    End
 End
@@ -2408,7 +2408,7 @@ Else Do
       End
    End
 End
-   
+
 /* 1.2 DUREE DE SAUVEGARDE ?                                     */
 info.serveur.2 = "; DUREE : "test.serveur.121"  "
 If Pos("PB", msg.serveur.121) \= 0 then Do
@@ -2432,8 +2432,8 @@ return
 /************************************************************************************************
       STATistique d'une sauvegarde depuis les archives des fichiers log
       -----------------------------------------------------------------
-      
-      
+
+
 syntaxe : stat hostname [jjmm[aaaa]]
 
 */
@@ -2458,7 +2458,7 @@ Select
                aaaa = SUBSTR(date('s'), 1, 4)
             End
             OtherWise Do
-            Tm = DISPLAY("ERREUR SYNTAXE : date="option.2" erronée. Doit être : date=jjmm[aaaa]")
+            Tm = DISPLAY("ERREUR SYNTAXE : date="option.2" erronï¿½e. Doit ï¿½tre : date=jjmm[aaaa]")
             return
             End
          End
@@ -2466,7 +2466,7 @@ Select
          jour_E = jj"/"mm"/"aaaa
       End
       Else Do
-         Tm = DISPLAY("ERREUR SYNTAXE : date="option.2" erronée. Doit être : date=jjmm[aaaa]")
+         Tm = DISPLAY("ERREUR SYNTAXE : date="option.2" erronï¿½e. Doit ï¿½tre : date=jjmm[aaaa]")
          return
       End
    End
@@ -2475,11 +2475,11 @@ Select
       jour_E = date('e')
    End
    OtherWise Do
-      Tm = DISPLAY("ERREUR SYNTAXE : "msgCmd" erronée. Doit être : stat hostname [jjmm[aaaa]]")
+      Tm = DISPLAY("ERREUR SYNTAXE : "msgCmd" erronï¿½e. Doit ï¿½tre : stat hostname [jjmm[aaaa]]")
       return
    End
 End
-   
+
 
 FichNoeEnv = "/home/exploit/scripts/noe/project_noe/ini/EXPL-TSM-ANA.env"
 If Stream(FichNoeEnv, 'c', 'query exists' ) \= "" then Do
@@ -2505,30 +2505,30 @@ FONCTIONS
 VerifArchive:
 Parse Arg tgf, cetxt
 tgfName = tgf
-do while Pos("/",tgfName) \= 0 
+do while Pos("/",tgfName) \= 0
       parse var tgfName asup"/"tgfName
    End
 If Stream(tgf, 'c', 'query exists' ) = "" then
    todsp    = "Nok -- Archivage : Nok | Nom : n/a  | Contenu : n/a"
 Else Do
-   /* Fichier créé       : OK                     */
+   /* Fichier crï¿½ï¿½       : OK                     */
    /* RECHERCHE : SAVOIR SI FICHIER EST VIDE OU NON               */
    If Stream(tgf, 'c', 'query size' ) = 0 then
-      /* Fichier créé       : OK                     */
+      /* Fichier crï¿½ï¿½       : OK                     */
       /* Fichier nonvide    : KO                     */
       todsp    = "Nok -- Archivage : Ok  | Nom : "tgfName"  | Contenu : VIDE"
    Else Do
-      /* Fichier créé       : OK                     */
+      /* Fichier crï¿½ï¿½       : OK                     */
       /* Fichier nonvide    : OK                     */
       /* RECHERCHE : SAVOIR SI FICHIER CONTIENT DES INFORMATIONS DE BACKUP      */
       Address System "grep -c '"cetxt"' "tgf WITH OUTPUT STEM test.
       if test.1 > 0 then
-          /* Fichier créé       : OK                  */
+          /* Fichier crï¿½ï¿½       : OK                  */
           /* Fichier nonvide       : OK                  */
           /* Fichier type sauvegarde   : OK                  */
       todsp    = "Ok  -- Archivage : Ok  | Nom : "tgfName"  | Contenu : INFOS BACKUP"
       Else
-          /* Fichier créé       : OK                  */
+          /* Fichier crï¿½ï¿½       : OK                  */
           /* Fichier nonvide       : OK                  */
           /* Fichier type sauvegarde   : KO                  */
       todsp    = "Nok -- Archivage : Ok  | Nom : "tgfName"  | Contenu : INVALIDE"

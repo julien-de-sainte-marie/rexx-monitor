@@ -3,7 +3,7 @@
                            ==============================
 Ce produit est un graticiel (houla...)
 Ecrit et maintenu par Julien de Sainte Marie
-mailto:julien.desaintemarie@unilog.fr
+mailto:julien.desaintemarie@gmail.com
 
 ****************************************************************************************/
 Parse Arg ProcessName" "Reste
@@ -443,14 +443,14 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-   
+
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then 
+      If Translate(msgData) \= SysVars.SysLEnd Then
          Call QueueData MSG
       Else
          Call PushData MSG
-      
+
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -1377,8 +1377,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-      
-   If wsockIPP \= "" Then 
+
+   If wsockIPP \= "" Then
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1486,9 +1486,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-            
+
             Call Main msgCmd
-            
+
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1536,16 +1536,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-            
+
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-         
+
          Call Main msgCmd
-         
+
          Trace Off
-         
+
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1826,7 +1826,7 @@ Do ForEver
 
    if CtrlAttn = 1 | SysStopAsked = 1 then do
       Call ThrowLogM ProcessName, "SHUTTING DOWN"
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du process demandé ..."
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrï¿½t du process demandï¿½ ..."
       Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Il y a actuellement "NumberProcess" process actifs"
       Call StopAllProcess
       SysVars.SysStopping  = 1
@@ -1851,7 +1851,7 @@ Do ForEver
    End
 
    if SysStopAsked = 2 then  Do
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du moniteur forcé !"
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrï¿½t du moniteur forcï¿½ !"
       Leave
    End
 
@@ -1894,7 +1894,7 @@ Do mI = 1 to LocalProcess.0
    if mQ \= "" then do
       Rc = CancelLoopForProcess( mQ )
       Rc = LinkMessage( mQ, "SYS_STOP", SysVars.SysLEnd )
-      Call Printf SysVars.SysMonName, MsgLLevelDisplaySyst, "Arrêt demandé pour "mQ
+      Call Printf SysVars.SysMonName, MsgLLevelDisplaySyst, "Arrï¿½t demandï¿½ pour "mQ
 
    End
 
@@ -2260,7 +2260,7 @@ Return
 MonitorStartQueueSys:
 msqsRC = Value("Rxstack_run",,Share)
 If msqsRC \= "NO" Then Do
-   Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Démarrage du service de gestion des files d'attente ..."
+   Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Dï¿½marrage du service de gestion des files d'attente ..."
 /***
    Address SYSTEM 'rxstack -d'
    Address SYSTEM 'sleep 1'
@@ -2279,7 +2279,7 @@ MonitorStopQueueSys:
 msqsRC = Value("Rxstack_run",,Share)
 If msqsRC \= "NO" Then Do
    If TheFirstQueue = SysVars.SysQueue Then Do
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du service de gestion des files d'attente ..."
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrï¿½t du service de gestion des files d'attente ..."
 /***
       Address SYSTEM 'rxstack -k'
 ***/
@@ -2312,7 +2312,7 @@ Else
    TheFirstQueue = ""
 /***********************************************
 if TheFirstQueue \= SysVars.SysQueue then do
-   Say "Monitor déjà actif !"
+   Say "Monitor dï¿½jï¿½ actif !"
    do I = 1 to LocalQueue.0
       if LocalQueue.I \= "" then
          Call RxQueue 'Delete', LocalQueue.I
@@ -2321,7 +2321,7 @@ if TheFirstQueue \= SysVars.SysQueue then do
 End
 ********/
 
-/* Libell‚s */
+/* Libellï¿½s */
 MsgLLevelDisplaySyst  = "LEVEL_SYSTEM"
 MsgLLevelDisplayRecv  = "LEVEL_RECEIVE"
 MsgLLevelDisplaySend  = "LEVEL_SEND"
@@ -2506,7 +2506,7 @@ if Avant \= "" then do
       Call PushData QmsgData
    Else
       Call QueueData QmsgData
-      
+
    QlmOk = 1
    Tm    = SetQueue( Avant )
 
@@ -2904,7 +2904,7 @@ if lpR = 0 then do
 End
 Else do
 
-   lpX = FindLockX( lkRsrc, lkWho )        /* Un verrou type 'X' posé ? */
+   lpX = FindLockX( lkRsrc, lkWho )        /* Un verrou type 'X' posï¿½ ? */
    if lpX = 1 then Return 0
 
    lpO = FindLockOwner( lkWho )
