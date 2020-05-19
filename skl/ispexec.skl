@@ -1,0 +1,140 @@
+
+/* -------------------------------------------------------------------------
+   ispexec_fnretrieve
+------------------------------------------------------------------------- */
+ispexec_fnretrieve:
+Parse Arg tbname
+
+Rc = 0
+If Symbol('tblist.0') = "VAR" Then Do
+   Do J = 1 To tblist.0
+      If tblist.J.name = tbname Then Do
+         Rc = J
+         Leave
+      End
+   End
+End
+Return Rc
+
+/* -------------------------------------------------------------------------
+   ispexec_fnretrieveval
+------------------------------------------------------------------------- */
+ispexec_fnretrieveval:
+Parse Arg colname, tbix, lnix
+
+Rc = ""
+Do tbI = 1 To tblist.tbix.cols
+   If tblist.tbix.cols.tbI = colname Then Do
+      Interpret('Rc = 'tblist.tbix.cols.tbI.Line.lnix.Value)
+      Leave
+   End
+End
+Return Rc
+
+/* -------------------------------------------------------------------------
+   ispexec_fnretrievecols
+------------------------------------------------------------------------- */
+ispexec_fnretrievecols:
+Parse Arg tbix, lnix
+
+Do tbI = 1 To tblist.tbix.cols
+   Interpret(tblist.tbix.cols.tbI' = "'tblist.tbix.cols.tbI.Line.lnix.Value'"')
+End
+Return
+
+/* -------------------------------------------------------------------------
+   ispexec_tbadd
+------------------------------------------------------------------------- */
+ispexec_tbadd:
+Parse Arg tbname
+Rc = 1
+J = ispexec_fnretrieve(tbname)
+If J > 0 Then Do
+   tblist.J.lines = tblist.J.lines + 1
+   L = tblist.J.lines
+   Do I = 1 To tblist.J.cols
+      tblist.J.cols.I.Line.L.Value = Value(Value('tblist.J.cols.I'))
+   End
+   Rc = 0
+End
+
+Return Rc
+
+/* -------------------------------------------------------------------------
+   ispexec_tbcreate
+------------------------------------------------------------------------- */
+ispexec_tbcreate:
+Parse Arg tbname" names("tbcols")"
+
+If Symbol('tblist.0') = "LIT" Then tblist.0 = 0
+tblist.0 = tblist.0 + 1
+J = tblist.0
+tblist.J.name = Strip(tbname)
+tblist.J.cols = Words(tbcols)
+tblist.J.lines = 0
+Do I = 1 To Words(tbcols)
+   tblist.J.cols.I = Word(tbcols,I)
+End
+Return 0
+
+/* -------------------------------------------------------------------------
+   ispexec_tbopen
+------------------------------------------------------------------------- */
+ispexec_tbopen:
+Return
+
+/* -------------------------------------------------------------------------
+   ispexec_tbclose
+------------------------------------------------------------------------- */
+ispexec_tbclose:
+Return
+
+/* -------------------------------------------------------------------------
+   ispexec_tbend
+------------------------------------------------------------------------- */
+ispexec_tbend:
+Return
+
+/* -------------------------------------------------------------------------
+   ispexec_tberase
+------------------------------------------------------------------------- */
+ispexec_tberase:
+Parse Arg tbname
+Rc = 1
+J = ispexec_fnretrieve(tbname)
+If J > 0 Then Do
+   tblist.J.name = ""
+   Rc = 0
+End
+
+Return Rc
+
+/* -------------------------------------------------------------------------
+   ispexec_setmsg
+------------------------------------------------------------------------- */
+ispexec_setmsg:
+Return
+
+/* -------------------------------------------------------------------------
+   ispexec_tbsort
+------------------------------------------------------------------------- */
+ispexec_tbsort:
+Return
+
+/* -------------------------------------------------------------------------
+   ispexec_tbtop
+------------------------------------------------------------------------- */
+ispexec_tbtop:
+Return
+
+/* -------------------------------------------------------------------------
+   ispexec_vput
+------------------------------------------------------------------------- */
+ispexec_vput:
+Return
+
+/* -------------------------------------------------------------------------
+   ispexec_vget
+------------------------------------------------------------------------- */
+ispexec_vget:
+Return

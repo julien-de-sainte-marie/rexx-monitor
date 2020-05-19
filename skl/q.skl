@@ -1,0 +1,127 @@
+/*************************************************************************************
+                                 SendMessage
+                           ======================
+****************************************************************************************/
+Parse Arg ArgAll
+ArgAll = Strip( ArgAll )
+
+if ArgAll = '/help' | ArgAll = '-help' | ArgAll = '--help' | ArgAll = "" then do
+   Say "Syntaxe:  Q [To[, Id,] ]Data | -help"
+   Say "-------"
+   Say ""
+   Say "To     : Destinataire. Si omis, le moniteur sera destinataire."
+   Say "Id     : Identifiant de message. Si omis, USR_MSG sera utilis‚."
+   Say "Data   : Donn‚es … fournir (pas de conversion en majuscules)."
+   Say ""
+   Say ""
+   Say "Exemples:"
+   Say "--------"
+   Say ""
+   Say "Q COMMAND,USR_CMD,dir                -> "
+   Say "Q COMMAND,,list des process          -> COMMAND,USR_MSG,list des ..."
+   Say "Q END                                -> MONITOR,USR_MSG,END"
+   Say "Q MAIL SEND MSG TO TOTO message      -> MAIL,USR_MSG,SEND MSG TO TOTO ..."
+   Exit
+End
+
+share                   = "ENVIRONMENT"
+SysVars.SysVersion.0    = 3
+SysVars.SysVersion.1    = "MOM$ version 2.1"
+SysVars.SysVersion.2    = ""
+SysVars.SysVersion.3    = ""
+SysVars.SysPath         = VALUE("PWD",,share)
+SysVars.SysTimerEnabled = 0
+SysVars.SysInSysout     = 0
+SysVars.SysTimeReset    = Time('R')
+SysVars.SysLockPath     = "./lock/"
+SysVars.SysQueue        = "PIPE"
+SysVars.SysMonName      = "MONITOR"
+SysVars.SysLTimeOut     = "!TIMEOUT!"
+SysVars.SysLHalt        = "!HALT!"
+SysVars.SysLIdle        = "!IDLE!"
+SysVars.SysLInit        = "!INIT!"
+SysVars.SysLBusy        = "!BUSY!"                 /* New */
+SysVars.SysLDeadLock    = "!DEADLOCK!"             /* New */
+SysVars.SysLCommit      = "COMMIT"                 /* New */
+SysVars.SysLEnd         = "END"
+SysVars.SysWhoAmI       = ""
+SysVars.SysStopping     = 0
+SysVars.SysTimerEnable  = 0
+SysVars.soSay           = "0"
+SysVars.SysElapsedIdle  = 0
+SysVars.SysElapsedCmd   = 0
+SysVars.SysElapsedAll   = 0
+SysVars.SysRacine       = ""
+SysVars.fileWSOCK       = "/etc/xchglistener.ini"
+SysVars.SysWriteSysout  = GetProfileString( , "SYSOUT", "TRACE", "NO" )
+SysVars.SysLoopDelay    = GetProfileString( , "SYSTEM", "LOOP_DELAY", "1" )
+SysVars.SysLoopBreak    = GetProfileString( , "SYSTEM", "LOOP_BREAK", "1" )
+SysVars.SysTSleep       = GetProfileString( , "SYSTEM", "LOOP_SLEEP", "0.5" )
+SysVars.SysLoopResend   = GetProfileString( , "SYSTEM", "LOOP_RESEND", "5" )
+SysVars.SysLoopForceTO  = GetProfileString( , "SYSTEM", "LOOP_FORCETIMEOUT", "5" )
+SysVars.SysLoopWM       = GetProfileString( , "SYSTEM", "LOOP_WAITMESSAGE", "0.5" )
+SysVars.SysDetectMon    = Translate(GetProfileString( , "SYSTEM", "DETECT_RUN_LOGON", "YES" )) /* JSM 13.03.2003 Here */
+SysVars.SysStopRedoT    = GetProfileString( , "SYSTEM", "LOOP_BEFORE_FORCE", "100" )
+SysVars.SysSendMessageQueue = ""
+SysVars.SysProcessLockName  = SysVars.SysLockPath""SysVars.SysMonName".LOK"
+SysVars.TID             = "0"
+SysVars.PPRIO           = "0"
+SysVars.TPRIO           = "0"
+SysVars.PTIME           = "0"
+SysVars.SysEtatQueue    = "ETAT_CPU"
+SysVars.SysPushQueue    = 0
+CpuQueue                = "PIPE_CPU"
+ResourceLocked          = SysLCommit
+AnswerQueue             = ""
+CreatedProcess          = 0
+ParentQ                 = ""
+LockedProcess           = 0
+CtrlAttn                = 0
+LocalQueue.0            = 0
+LocalProcess.0          = 0
+TimeToWait              = 1
+NumberProcess           = 0
+FirstInstance           = 0
+ProcessInitialized      = 0
+ProcessLockName         = SysVars.SysLockPath""ProcessName".LOK"
+EndForce                = 0
+WaitingIdle             = 0
+devnull                 = " > /dev/null 2>&1"
+wsockIPP                = Strip(GetProfileString(,"SYSOUT","WSOCKIP",""))
+
+CreatedProcess          = 1
+SysVars.SysWhoAmI       = "SYSTEM_"RxQueue('get')
+
+b = Pos( ' ', ArgAll )
+v = Pos( ',', ArgAll )
+
+if (v > 0 & v < b) | b = 0 then
+   Parse Var ArgAll pTo","pId","pData
+Else do
+   Parse Var ArgAll pTo" "pData
+   pId = ""
+End
+
+pTo   = Translate( Strip( pTo ))
+pId   = Translate( Strip( pId ))
+pData = Strip( pData )
+
+if pTo \= "" & pId = "" & pData = "" then do
+   pData = pTo
+   pTo   = SysVars.SysMonName
+End
+
+if pTo = "" then do
+   pTo = SysVars.SysMonName
+end  /* Do */
+
+if pId = "" then do
+   pId = "USR_MSG"
+end  /* Do */
+
+Ok = PostMessage( pTo, pId, pData )
+if Ok = 0 then
+   Say "ERR: To="pTo", Id="pId", Data="pData
+
+Return
+/* =================================================================================== */

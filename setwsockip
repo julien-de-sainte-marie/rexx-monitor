@@ -1,0 +1,22 @@
+#!/bin/sh
+
+if [ "$1" = "X" ]
+then
+   SockIP=$WSOCKIP
+else
+   SockIP="$1 $2"
+fi
+if [ "$3" = "" ]
+then
+   OnOff=$WSOCKIP_OnOff
+else
+   OnOff=$3
+fi
+echo "export WSOCKIP='$SockIP'" > /etc/xchglistener.ini
+echo "export WSOCKIP_OnOff='$OnOff'" >> /etc/xchglistener.ini
+if [ "$OnOff" = "1" ]
+then
+   touch TourDeControle.active
+else
+   rm TourDeControle.active > /dev/null 2>&1
+fi

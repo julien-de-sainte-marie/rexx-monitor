@@ -1,0 +1,60 @@
+/* Point d'entrée
+
+   Données = msgCmd
+
+*/
+Main:
+/* Pour interdire l'utilisation du Ctrl-C */
+LockedProcess = 1
+
+
+/* Plusieurs images du process sont actives ? */
+If FirstInstance = 0 then do
+   Nop
+End
+
+/* Le processus n'a pas été initialisé */
+if ProcessInitialized = 0 then do
+   /* Initialisation des variables */
+   .
+   .
+   .
+End
+
+Select
+   /* Fin du process demandée */
+   When msgCmd = SysVars.SysLEnd then do
+      .
+      .
+      .
+   End
+   /* Initialisation du process demandée */
+   When msgCmd = SysVars.SysLInit then do
+      .
+      .
+      .
+   End
+   /* Rien à faire ... */
+   When msgCmd = SysVars.SysLIdle then do
+      .
+      .
+      .
+   End
+   OtherWise
+      .
+      .
+      .
+End
+Return
+
+
+/***************************************************************************************
+   Prise en charge de certains messages système
+   --------------------------------------------
+
+   msgId    Identifiant du message
+   msgCmd   Commande associée au message
+
+****************************************************************************************/
+ProUserHook:
+Return

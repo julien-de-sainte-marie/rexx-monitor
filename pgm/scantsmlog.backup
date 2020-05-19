@@ -1,0 +1,86 @@
+/* 
+                                          Analyse des journaux TSM 
+*/
+Main:
+
+/* Plusieurs images du process sont actives ? */
+If FirstInstance = 0 then do
+   tm = Display("Une autre instance du process est déjà active. Fin de cette instance.")
+   EndForce = 1
+   Return
+End
+
+Select
+   /* Fin du process demandée */
+   When msgCmd = SysVars.SysLEnd then do
+      Nop
+   End
+   /* Initialisation du process demandée */
+   When msgCmd = SysVars.SysLInit then do
+      tm = Display("Initialisation du process en cours.")
+      
+      tmpfile = "/tmp/scantsmlog.log"
+      
+      tm = Display("Initialisation du process terminée.")
+   End
+   /* Rien à faire ... */
+   When msgCmd = SysVars.SysLIdle then do
+      Nop
+   End
+   When Translate(Word(msgCmd,1)) = "SCAN" then do
+      Call doScan
+   End
+   OtherWise
+      Nop
+End
+Return
+
+
+/************************************************************************************************
+      Commande d'analyse d'une trace TSM
+      ----------------------------------
+      
+      
+syntaxe : scan host=xxxxx,file=yyyyy
+
+*/
+doScan:
+Parse Var msgCmd x_cmd" "x_host","x_file
+Parse Var x_host p_host"="hostname
+Parse Var x_file p_file"="filename
+
+tm = Display("Action=scan,host="hostname",file="filename)
+Address System "rm "tmpfile
+Address System "rsh "hostname" tail -100 "filename" > "tmpfile
+
+do_display = 0
+ligne      = ""
+If Stream(tmpfile, 'c', 'query exists' ) \= "" then Do
+   Tm = Stream(tmpfile, 'c', 'open read' )
+   If Tm = 'READY:' then do
+      Do while Lines(tmpfile) > 0
+         ligne = Strip(LineIn(tmpfile))
+         Parse Var ligne x_date"   "x_time" "x_reste
+
+         Select 
+            When Left(x_reste, 28) = "--- SCHEDULEREC STATUS BEGIN" Then Do
+               do_display = 1
+            End
+            When Left(x_reste, 26) = "--- SCHEDULEREC STATUS END" Then Do
+               do_display = 0
+            End
+            OtherWise
+               if do_display = 1 then tm = Display(x_reste)
+         End
+      End
+      Tm = Stream(tmpfile, 'c', 'close')
+      Address System "rm "tmpfile
+      
+      /* Est-ce que la dernière ligne lue correspond au mode écoute du dsmsched ? */
+      if x_reste = "Waiting to be contacted by the server." then
+         tm = Display("Le client TSM a terminé et attend d'être contacté.")
+      Else
+         tm = Display("Le client TSM n'a pas terminé la sauvegarde.")
+   End
+End
+return

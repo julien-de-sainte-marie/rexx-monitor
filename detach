@@ -1,0 +1,5 @@
+#!/usr/bin/ksh
+PrName=$1
+shift
+rexx cmd/$PrName.rexx "$*" &
+#rexx detach.rexx $1 $2 

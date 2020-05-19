@@ -1,0 +1,28 @@
+Main:
+if ProcessInitialized = 0 then do
+   nbW = 0
+End
+
+Select
+   When msgCmd = Sysvars.SysLInit then do
+      Call SysOut "Reçu : INIT"
+      Rc = Lock( "TOTO", "X" )
+   End
+   When msgCmd = Sysvars.SysLIdle then do
+      nbW = nbW + 1
+      if nbW > 10 then do
+         Call Test
+         nbW = 0
+      End
+   End
+   When msgCmd = Sysvars.SysLEnd then do
+      Call SysOut "Reçu : END"
+   End
+   OtherWise
+      nop
+End
+Return
+
+Test:
+tm = Display( 'Salut !' )
+return

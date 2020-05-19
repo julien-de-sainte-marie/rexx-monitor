@@ -1,0 +1,30 @@
+Main:
+
+if ProcessInitialized = 0 then do
+   usrTest = 0
+   usrLock = 0
+End
+
+Select
+   When msgCmd = SysVars.SysLInit then do
+      usrTest = 1
+   End
+   When msgCmd = SysVars.SysLIdle then do
+      if usrTest = 1 then Call Test
+   End
+   OtherWise
+      nop
+End
+Return
+
+Test:
+if usrLock = 0 then do
+   Rc = Lock( "TOTO", "S" )
+   usrLock = 1
+End
+Say "Demander l'heure ..."
+tm = SendMessage( "testr", "USR_MSG", "TIME" )
+if Left( Tm, 1 ) \= "!" then do
+   Call SysOut "Il est : "Tm
+End
+return

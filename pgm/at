@@ -1,0 +1,204 @@
+Main:
+Parse Arg Cmd
+
+Cmd      = Space( Cmd )
+sCmd     = Cmd
+IsError  = 0
+Heure    = 0
+Minut    = 0
+Event    = ""
+
+Help.1 = "AT NOW command"
+Help.2 = "AT [HH][:MM] command"
+Help.3 = "AT END command"
+Help.4 = "AT SLEEP command"
+Help.5 = "AT WAKE command"
+Help.6 = "AT EVERY nn command   /* Every nn minute(s) */"
+Help.0 = 6
+
+if ProcessInitialized = 0 then do
+   Call Display "INIT BEGINS"
+   Task.0   = 0
+   FileAt   = GetProfileString( , "PROCESS_AT", "FichierCommande", "" )
+
+   if FileAt \= "" then do
+      Rc = Lock( "FileAt", "X" )
+      do While Lines( FileAt ) > 0
+         Line = Strip( LineIn( FileAt ))
+         Push "USR_MSG~"Line
+         Call Display "RESUBMITTING "Line
+      End
+      Rc = Stream( FileAt, 'c', 'close' )
+      Address SYSTEM 'rm 'FileAt' >/dev/null 2>&1'
+      Rc = UnLock( "FileAt" )
+   End
+   Call Display "INIT ENDED"
+   Return
+end
+
+if cmd = "" | cmd = SysVars.SysLIdle then do
+   do I = 1 to Task.0
+
+      ti1 = time()
+      ti2 = substr(ti1, 1, 2)""substr(ti1, 4, 2)
+
+      if Task.I.AtEvent = 'ETIME' & Task.I.AtTime = ti2 & Task.I.Run = 1 then do
+         Task.I.Run = 0
+         Call Display "START "Task.I.AtCmd" BECAUSE TIME AT "Task.I.AtTime
+         Address SYSTEM Task.I.AtCmd
+         Call Display "RESULT IS "rc
+      end
+      else
+      if Task.I.AtEvent = 'MTIME' & Task.I.AtTime = ti2 & Task.I.Run = 1 then do
+
+         Call Display "START "Task.I.AtCmd" BECAUSE TIME AT "Task.I.AtTime
+         Address SYSTEM Task.I.AtCmd
+         Call Display "RESULT IS "rc
+
+         Heure = Left( Task.I.AtTime, 2 )
+         Minut = Right( Task.I.AtTime, 2 )
+         Minut = Minut + Task.I.Every
+
+         do while Minut > 59
+            Heure = Heure + ( Minut % 60 )
+            Minut = Minut // 60
+         end
+         Task.I.AtTime = Heure""Minut
+
+      end
+   End
+
+   return
+end
+else
+if Cmd = SysVars.SysLEnd then do
+   Call SpecialEvent
+   Return
+End
+
+wTf = 1
+if Translate(Substr( Cmd, 1, 3 )) = 'NOW' then do
+   Parse var Cmd dummy' 'Cmd
+
+   Cmd   = Strip( Cmd )
+   Event = 'ETIME'
+   Heure = substr(Time(), 1, 2)
+   Minut = substr(Time(), 4, 2)
+   wTf   = 0
+end
+else
+if Translate(Substr( Cmd, 1, 3 )) = 'END' then do
+   Parse var Cmd dummy' 'Cmd
+   Cmd   = Strip( Cmd )
+   Event = 'END'
+   wTf   = 0
+end
+else
+if Translate(Substr( Cmd, 1, 4 )) = 'WAKE' then do
+   Parse var Cmd dummy' 'Cmd
+   Cmd   = Strip( Cmd )
+   Event = 'WAKE'
+   wTf   = 0
+end
+else
+if Translate(Substr( Cmd, 1, 5 )) = 'SLEEP' then do
+   Parse var Cmd dummy' 'Cmd
+   Cmd   = Strip( Cmd )
+   Event = 'WAIT'
+   wTf   = 0
+end
+else
+if Translate(Substr( Cmd, 1, 5 )) = 'EVERY' then do
+   Parse var Cmd dummy' 'EveryT" "Cmd
+
+   EveryT = Strip( EveryT )
+   Cmd    = Strip( Cmd )
+   Heure  = substr(Time(), 1, 2)
+   Minut  = substr(Time(), 4, 2)
+   Event  = 'MTIME'
+
+   if DataType( EveryT ) \= 'NUM' then IsError = 1
+
+end
+else do
+   Event = 'ETIME'
+
+   if Left( Cmd, 1 ) = ":" then do
+      Parse var Cmd ':'Minut" "Cmd
+      Heure = substr(Time(), 1, 2)
+      Cmd   = Strip( Cmd )
+   end
+   else
+   if Pos( ':', Cmd ) > 0 then do
+      Parse var Cmd Heure':'Minut" "Cmd
+      Cmd   = Strip( Cmd )
+   end
+   else do
+      Parse var Cmd Heure" "Cmd
+      Minut = "00"
+      Cmd   = Strip( Cmd )
+   end
+end
+
+if DataType( Heure ) \= 'NUM' | DataType( Minut ) \= 'NUM' then IsError = 1
+
+if IsError = 1 then do
+   Call SayHelp
+   return
+end
+
+if wTf = 1 Then
+   if FileAt \= "" then do
+      Rc = LineOut( FileAt, sCmd )
+      Rc = LineOut( FileAt )
+   End
+
+if Event = 'ETIME' then do
+   do while Minut > 59
+      Heure = Heure + ( Minut % 60 )
+      Minut = Minut // 60
+   end
+end
+
+if Length( Heure ) < 2 then Heure = "0"Heure
+if Length( Minut ) < 2 then Minut = "0"Minut
+
+Task.0         = Task.0 + 1
+I              = Task.0
+Task.i.AtCmd   = Cmd
+Task.i.Run     = 1
+Task.i.AtEvent = Event
+
+if Event = 'ETIME' then do
+   Task.I.AtTime = Heure""Minut
+   Call Display "AT "Task.I.AtTime" WHEN "Task.i.AtEvent" EXEC "Task.I.AtCmd
+   Call SysOut "AT "Task.I.AtTime" WHEN "Task.i.AtEvent" EXEC "Task.I.AtCmd
+end
+else
+if Event = 'MTIME' then do
+   Task.I.AtTime = Heure""Minut
+   Task.I.Every  = EveryT
+   Call Display "EVERY "Task.I.Every" WHEN "Task.i.AtEvent" EXEC "Task.I.AtCmd
+   Call SysOut "EVERY "Task.I.Every" WHEN "Task.i.AtEvent" EXEC "Task.I.AtCmd
+end
+else do
+   Call Display "WHEN "Task.i.AtEvent" EXEC "Task.I.AtCmd
+   Call SysOut "WHEN "Task.i.AtEvent" EXEC "Task.I.AtCmd
+end
+return
+
+SpecialEvent:
+do I = 1 to Task.0
+
+   if Task.I.AtEvent = Translate( msgCmd ) & Task.I.Run = 1 then do
+      Call Display "START "Task.I.AtCmd" BECAUSE "Task.i.AtEvent
+      Address SYSTEM Task.I.AtCmd
+      Call Display "RESULT IS "rc
+   End
+
+End
+Return
+
+ProcUserHook:
+Call SpecialEvent
+Return

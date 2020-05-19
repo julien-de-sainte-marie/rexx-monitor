@@ -1,0 +1,227 @@
+/* Point d'entre */
+Main:
+
+If FirstInstance = 0 then do
+   Call Display "Pas plus d'une instance ne peut etre activ‚e !"
+   EndForce = 2
+   Return
+End
+
+/* Le processus n'a pas ‚t‚ initialis‚ */
+if ProcessInitialized = 0 then do
+   /* Initialisation des variables */
+   DdeIniName  = "INI\DDE.INI"
+
+   DdeSrv.0    = 0
+
+End
+
+Select
+   When msgCmd = Sysvars.SysLEnd then do
+
+      tmRc = SysRemoveService( DdeService )
+
+   End
+
+   When msgCmd = Sysvars.SysLInit then do
+
+      Call Display "Initialisation en cours ..."
+
+      DdeService  = GetProfileString( DdeIniName, "SERVICE", "NAME", "" )
+      if DdeService  = "" then do
+         Call Display "Ajout de SERVICE/NAME"
+         DdeService  = "SERVICE_DDE"
+         Rc          = WriteProfileString( DdeIniName, "SERVICE", "NAME", DdeService )
+      End
+
+      if SysAddService( DdeService ) = 0 then do
+         Call Display "Cr‚ation du service "DdeService" impossible !"
+         EndForce = 2
+         Return
+      End
+      Call Display "Initialisation termin‚e."
+
+   End
+
+   When msgCmd = Sysvars.SysLIdle then do
+
+      Nop
+
+   End
+
+   OtherWise
+
+     Parse var msgCmd Cmd":"Data
+
+      Cmd   = Translate( Strip( Cmd ))
+      Data  = Strip( Data )
+
+      Select
+
+         When Cmd = "REGISTER_SERVICE" then do
+            Parse var Data aQueue":"Data
+
+            msgResult = AddService( aQueue, Data )
+            Call SysOut "REGISTER_SERVICE: Service="Data" < "msgResult
+
+         End
+
+         When Cmd = "REGISTER_ATOM" then do
+
+            Parse var Data aSrv":"aAtom
+            msgResult = AddAtom( aSrv, aAtom )
+            Call SysOut "REGISTER_ATOM: Service="aSrv", Atom="aAtom" < "msgResult
+
+         End
+
+         When Cmd = "LOGIN" then do
+
+         End
+
+         OtherWise
+
+            Nop
+
+      End
+
+End
+
+Return
+
+
+/***************************************************************************************
+   Gestion des services
+****************************************************************************************/
+/* Rechercher un service */
+FindService:
+Arg fsSrv
+
+do fsI = 1 to DdeSrv.0
+
+   if DdeSrv.fsI = fsSrv then
+      Return fsI
+
+End
+Return 0
+
+
+/* Chercher poste libre */
+AllocService:
+
+do asI = 1 to DdeSrv.0
+
+   if DdeSrv.asI = "" then
+      Return asI
+
+End
+
+asI      = DdeSrv.0 + 1
+DdeSrv.0 = asI
+Return asI
+
+
+/* Ajouter un service */
+AddService:
+Arg aQueue, asSrv
+
+asSrv = Translate( Strip( asSrv ))
+
+if asSrv = "" then
+   asRc = "ERROR:SERVICE NON RENSEIGNE"
+Else
+if FindService( asSrv ) > 0 then
+   asRc = "ERROR:SERVICE DEJA ACTIF"
+Else do
+
+   asI            = AllocService()
+   DdeSrv.asI     = asSrv
+   DdeSrv.asI.Own = aQueue
+   DdeSrv.asI.0   = 0
+   asRc           = SysLCommit
+
+End
+Return asRc
+
+
+
+/***************************************************************************************
+   Gestion des atomes
+****************************************************************************************/
+/* Rechercher un atome */
+FindAtom:
+Arg faSrv, faAtom
+
+do faI = 1 to DdeSrv.faSrv.0
+
+   if DdeSrv.faSrv.faI = faAtom then
+      Return faI
+
+End
+Return 0
+
+
+/* Chercher poste libre */
+AllocAtom:
+Arg aaSrv
+
+do aaI = 1 to DdeSrv.aaSrv.0
+
+   if DdeSrv.aaSrv.aaI = "" then
+      Return aaI
+
+End
+
+aaI            = DdeSrv.aaSrv.0 + 1
+DdeSrv.aaSrv.0 = aaI
+Return aaI
+
+
+/* Ajouter un atome */
+AddAtom:
+Arg aaSrv, aaAtom
+
+aaSrv    = Translate( Strip( aaSrv ))
+aaAtom   = Translate( Strip( aaAtom ))
+
+if aaSrv = "" then
+   aaRc = "ERROR:SERVICE NON RENSEIGNE"
+Else
+if aaAtom = "" then
+   aaRc = "ERROR:ATOME NON RENSEIGNE"
+Else do
+   nnI = FindService( aaSrv )
+   if nnI = 0 then
+      aaRc = "ERROR:SERVICE INCONNU"
+   Else do
+
+      if FindAtom( nnI, aaAtom ) > 0 then
+         aaRc = "ERROR:ATOME DEJA ACTIF"
+      Else Do
+
+         aaI               = AllocAtom( nnI )
+         DdeSrv.nnI.aaI    = aaAtom
+         DdeSrv.nnI.aaI.0  = 0
+         aaRc              = SysLCommit
+
+      End
+
+   End
+
+End
+Return aaRc
+
+
+
+
+
+/***************************************************************************************
+   Prise en charge de certains messages systeme
+   --------------------------------------------
+
+   msgId    Identifiant du message
+   msgCmd   Commande associee au message
+
+****************************************************************************************/
+ProUserHook:
+Return
+

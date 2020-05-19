@@ -1,0 +1,165 @@
+/* Procédure principale */
+Main:
+Parse arg Ligne
+
+Cmd = strip(msgCmd)
+
+/* Tester la fin de traitement */
+if Cmd = SysVars.SysLEnd then do
+   return
+end
+
+/* Initialisation */
+If ProcessInitialized = 0 then do
+   Call Display 'WAITCMD001M: Init phase begins'
+   CmdToProcess = ""
+   Cmd          = ""
+   Call Display 'WAITCMD002M: Init phase done'
+   Call SysOut ">>> Entrer une commande (me help pour obtenir de l'aide): ", "1"
+   InList         = 0
+   InListProcess  = 0
+   InListEvents   = 0
+   FicP           = ""
+   XcomSend       = "0000001"
+   SharedQ        = AllocQueue()
+end
+
+/* Named pipe plein ??? */
+if strip(Cmd) \= SysVars.SysLIdle & strip(Cmd) \= "" then do
+   Call ScanCmd
+end
+
+/* Lecture buffer clavier */
+if Lines() > 0 then do
+   Pull Cmd
+   Local = 1
+   Call ScanCmd
+   Local = 0
+end
+return
+
+ScanCmd:
+Perso = 0
+sCmd  = Cmd
+if perso = 0 then do
+   Parse var Cmd Dest " " Cmd
+   SELECT
+      When strip(Dest) = "ME" then do
+         if Local = 0 then Call SysOut sCmd, "1"
+         Call TrtCmd
+      end
+      When strip(Substr(Dest,1,4)) = "WAKE" then do
+         if Local = 0 then Call SysOut sCmd
+         Call Display "WAITCMD IS ALIVE"
+      end
+      Otherwise
+         if Local = 0 then Call SysOut sCmd, "1"
+         Cmd = sCmd
+         'Call q.rexx 'Cmd
+   end
+end
+Cmd = ""
+If InList <= 0 then do
+   Call SysOut ">>> Entrer une commande (me help pour obtenir de l'aide): ", "1"
+   InList = 0
+End
+return
+
+TrtCmd:
+Parse var Cmd a1" "Reste
+
+Call Display "*********** START TrtCmd ************"
+
+SIGNAL ON SYNTAX NAME TrtCmdErr
+SIGNAL ON HALT   NAME TrtCmdErr
+
+Select
+   When a1 = "LOG" then do
+      Call SysCls
+      'TYPE LOG\MONITOR.MSG | MORE'
+   End
+   When a1 = "HELP" then do
+      Call SysCls
+      Say "********************** AIDE GENERALE *****************************************"
+      Say "ME LIST [ PROCESS | EVENTS | MESSAGES ][, fichier]"
+      Say "ME EXEC CMD commande                    Ex‚cuter une commande"
+      Say "ME EXEC CALL fonction                   Ex‚cuter une fonction"
+      Say "ME EXEC PRO programme                   Ex‚cuter un programme"
+      Say "ME EXEC FILE fichier                    Ex‚cuter un fichier"
+      Say "ME END                                  Terminer le process"
+      Say "ME CREATE EVENT nom                     Ajouter un identifiant de message"
+      Say "ME ADD EVENT nom message                Affecter un message … 'nom'"
+      Say "ME CLEAR EVENT nom                      Supprimer les messages affect‚s … 'nom'"
+      Say "ME DELETE EVENT nom                     Supprimer un identifiant de message"
+      Say "ME LOG                                  Afficher la LOG systŠme"
+      Say "TRUNCLOG                                Effacer la LOG systŠme"
+      Say "process message                         Envoyer un message pour un process"
+      Say "        EXECCMD commande                Ex‚cuter une commande par un process"
+      Say "        SETTIME nn                      Dur‚e des boucles de sommeil"
+      Say "        TRACE [ ON | OFF ]              Activer/d‚sactiver la trace du process"
+      Say "        WAIT                            Mettre le process en sommeil"
+      Say "        WAKE                            R‚veiller le process"
+      Say ""
+   End
+   when a1 = "EXEC" then do
+      parse var Reste a1" "Reste
+      select
+         when a1 = "CMD" then do
+            Interpret Reste
+         end
+         when a1 = "CALL" then do
+            Cmd = "Call "Reste
+            Interpret Cmd
+         end
+         when substr(a1,1,3) = "PRO" then do
+            Reste
+         end
+         when a1 = "FILE" then do
+            "Call" Reste
+         end
+         otherwise
+            Call SysOut "Error EXEC invalide", "1"
+            Call SysOut "Err: "a1"," Reste, "1"
+      end
+   end
+   when a1 = "END" then
+      EndForce = 2
+   when a1 = "LIST" then do
+      If Pos(",",Reste) > 0 then do
+         Parse var Reste Reste","FicP
+         Reste = Strip(Reste)
+         FicP  = Strip(FicP)
+      End
+      Else FicP = ""
+      Call Display "LIST:"Strip(Reste)":"SharedQ
+      Get = SendMessage( , "SYS_HOOK", "LIST:"Strip(Reste)":"SharedQ )
+      if Get = "DONE" then do
+         Avant = SetQueue( SharedQ )
+         do while Queued() > 0
+            Pull Ln1
+            Pull Ln2
+            Say Ln1"  ==  "Ln2
+         end
+         Rc = SetQueue( Avant )
+      end
+   End
+   otherwise
+      Call Display a1":"Strip(Reste)
+End
+Signal TrtCmdNoErr
+
+TrtCmdErr:
+cerr = rc
+Say ""
+Say "***************************** ATTENTION *****************************"
+Say "*****            Erreur de traitement de la commande            *****"
+Say "*****           Reprise sur fin de proc‚dure effectu‚e          *****"
+Say "***************************** ATTENTION *****************************"
+Say "Systeme error #"cerr
+Say "Systeme message "errortext(cerr)
+Say ""
+Say ""
+TrtCmdNoErr:
+Call Display "*********** END   TrtCmd ************"
+return
+

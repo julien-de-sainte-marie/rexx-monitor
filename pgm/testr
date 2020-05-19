@@ -1,0 +1,30 @@
+Main:
+
+if ProcessInitialized = 0 then do
+   usrTest = 0
+   usrLock = 0
+End
+
+Select
+   When msgCmd = SysVars.SysLInit then do
+      usrTest = 1
+      T       = Time('E')
+   End
+   When msgCmd = SysVars.SysLIdle then do
+      if usrLock = 0 then do
+         Rc = Lock( "TOTO", "S" )
+         usrLock = 1
+      End
+   End
+   When msgId = "USR_MSG" then
+      Call Test
+
+   OtherWise
+      nop
+End
+Return
+
+Test:
+Say "Demande pour "msgCmd
+msgResult = Left( Time('L'), 11 )
+return

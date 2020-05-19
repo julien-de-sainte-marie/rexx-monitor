@@ -1,0 +1,472 @@
+/* Proc‚dure principale */
+Main:
+Ligne = msgCmd
+
+If FirstInstance = 0 then do
+   Call Display "Pas plus d'une instance ne peut être activée !"
+   EndForce = 2
+   Return
+End
+
+Cmd = strip(Ligne)
+
+/* Tester la fin de traitement */
+if Cmd = SysVars.SysLEnd then do
+   if FirstInstance = 1 & ProcessInitialized = 0 then
+      Status = LineOut(LocalBal)
+   return
+End
+
+/* Initialisation */
+If ProcessInitialized = 0 then
+   ReInit = 1
+
+If ReInit = 1 then do
+   HelpLine       = "SEND [MSG|FILE|CMD] TO user data"
+   FicMailTmp     = "/tmp/"ProcessName".tmp"
+   BalName        = ""
+   PrivateBal     = ""
+   BalLock        = ""
+   BalLocked      = 1
+   BalPath        = ""
+   BalTmstp       = ""
+   User           = ""
+   UserPwd        = ""
+   NetName        = ""
+   NetPath        = ""
+   TryLater       = 0
+   SendMsg.0      = 0
+   AddOk          = 0
+   NbrMsgToPost   = 0
+   InitBalDone    = 0
+   CompteurIx     = 1
+   CompteurIxMax  = 5
+   Anonymous      = 0
+   LocalBal       = "mail/mailbox.bal"
+   ReInit         = 0
+   NoFicOut       = 1
+   MailIniFile    = "ini/mail.ini"
+   DefaultSection = "Defaut"
+   KeyBal         = "BoiteAuxLettres"
+   KeyPassword    = "MotDePasse"
+   KeyAnonimous   = "Anonyme"
+
+   Call Display 'INIT MAIL IN PROGRESS'
+
+   If Stream(LocalBal,"c","Query exists") = '' then do
+      If Stream(LocalBal,"c","open write") \= "READY:" then do
+         'md mail > nul 2>&1'
+         If Stream(LocalBal,"c","open write") \= "READY:" then do
+            Call Display "MAIL CANNOT CREATE "LocalBal
+            EndForce = 2
+            Return
+         End
+      End
+      rc = Stream(LocalBal,"c","close")
+   End
+
+   User    = Translate(Strip(VALUE("USERNAME",,share)))
+   NetName = Translate(Strip(VALUE("USERDOMAIN",,share)))
+   Say "User="User", NetName="NetName
+
+   if User = "" then do
+      Call Display "Identification impossible (SET USERNAME)"
+      EndForce = 2
+   End
+   If EndForce = 0 then do
+
+      Rc = GetProfileString( MailIniFile, DefaultSection, KeyBal, "" )
+      if Rc \= "" then
+         Tm = PostMessage( ProcessName, "", "SET BALNAME="Rc )
+
+      Rc = Strip( GetProfileString( MailIniFile, DefaultSection, KeyPassword, "" ))
+      if Rc \= "" then
+         Tm = PostMessage( ProcessName, "", "SET PASSWORD="Rc )
+
+      Rc = GetProfileString( MailIniFile, DefaultSection, KeyAnonimous, "0" )
+      if Rc = "1" then
+         Tm = PostMessage( ProcessName, "", "SET ANONYMOUS" )
+
+      Call Display 'INIT MAIL ENDED'
+      Ti = TimeToWait * CompteurIxMax
+      Call Display "AUTOMATIC READ TIME ABOUT "Ti
+   End
+   Else do
+      Call Display 'INIT MAIL FAILED - STOP PROCESS'
+   End
+End
+Else Do
+
+   CompteurIx = CompteurIx + 1
+   If CompteurIx > CompteurIxMax then do
+      CompteurIx = 1
+      BalTmstp   = ""
+   End
+
+   Select
+      When Cmd = "WAKE" then do
+         Call Display "MAIL IS ALIVE"
+         if InitBalDone = 0 then Call Display "MAIL WAITS FOR 'SET BALNAME' COMMAND"
+      End
+      When Translate( Substr( Cmd, 1, 4 )) = "SET " then do
+         Parse var Cmd t" "Objet"="Reste
+         Objet = translate(strip(Objet))
+         Reste = translate(strip(Reste))
+         Select
+            When Objet = "BALNAME" then do
+               BalName  = Reste
+               BalPath  = FileSpec('drive',BalName)""FileSpec('path',BalName)
+               BalLock  = BalPath"LOCK"
+
+               if Stream(BalLock,'c','query exists') = "" then do
+                  x = Lineout(BalLock,'LOCK')
+                  x = Lineout(BalLock)
+               End
+
+               if Stream(BalName,'c','query exists') = "" then do
+                  x        = Stream(BalName,'c','open write')
+                  x        = Stream(BalName,'c','close')
+                  BalTmstp = Stream(BalName,'c','query datetime')
+               End
+
+               InitBalDone = 1
+               Call Display "MAIL PATH IS "BalName
+
+               if BalCheckLock() = 0 then
+                  Call Display 'LOCKING BAL IS CORRECT - UNLOCKING'
+               Else
+                  Call Display 'NOT ABLE TO LOCK BAL'
+
+            End
+            When Objet = "USER" | Objet = "USERNAME" then do
+               Reste = strip(Reste)
+               If Reste \= "" then do
+                  User = Reste
+                  Say "User="User", NetName="NetName
+               End
+            End
+            When Objet = "PASSWORD" then do
+               Reste = strip(Reste)
+               If Reste \= "" then do
+                  If Stream(Reste,'c','open read') = 'READY:' then do
+                     UserPwd = Strip(LineIn(Reste))
+                     Status  = Stream(Reste,'c','close')
+                     if UserPwd\= "" then Call Display "PASSWORD ACTIVE"
+                  End
+               End
+            End
+            When Objet = "ANONYMOUS" then do
+               Anonymous = 1
+            End
+            Otherwise
+               Call Display "UNSUPPORTED SET "Objet" COMMAND"
+         End
+      End
+      When Substr(Cmd,1,5) = "SEND " then do
+         Parse var Cmd t" "What" TO "sUsr" "Reste
+         sUsr  = translate(strip(sUsr))
+         What  = translate(strip(What))
+         Reste = strip(Reste)
+         if sUsr = "" then
+            Call Display "INVALID SEND SYNTAX - USER IS MISSING - "HelpLine
+         else
+         if What = "" then
+            Call Display "INVALID SEND SYNTAX - MSG|FILE IS MISSING - "HelpLine
+         else
+         if Reste = "" then
+            Call Display "INVALID SEND SYNTAX - data IS MISSING - "HelpLine
+         else do
+            Select
+               When What = "MSG" | What = "FILE" | What = "CMD" | What = "ACK" then do
+                  I         = SendMsg.0 + 1
+                  SendMsg.0 = I
+                  SendMsg.I = What"!"sUsr"!"Reste
+                  Call Display "SEND "What"("I") TO "sUsr" IN BUFFER"
+                  NbrMsgToPost = NbrMsgToPost + 1
+               End
+               Otherwise
+                  Call Display "INVALIDE SEND SYNTAX - "What" - "HelpLine
+            End
+         End
+      End
+      When Cmd = SysVars.SysLIdle | Cmd = "" then do
+         if NbrMsgToPost > 0 then do
+            If BalOpen() = 0 then do
+               Do I = 1 to SendMsg.0
+                  If SendMsg.I \= "" then do
+                     Parse var SendMsg.I What"!"sUsr"!"sData
+                     Select
+                        When What = "MSG" then
+                           Call BalAddMsg sUsr sData
+                        When What = "FILE" then
+                           Call BalAddFile sUsr sData
+                        When What = "CMD" then
+                           Call BalAddCmd sUsr sData
+                        When What = "ACK" then
+                           Call BalAddAck sUsr sData
+                        Otherwise
+                           AddOk = 2
+                     End
+
+                     If AddOk = 1 then do
+                        Call Display What"("I") POSTED"
+                        SendMsg.I    = ""
+                        NbrMsgToPost = NbrMsgToPost - 1
+                     End
+                     Else
+                     If AddOk = 2 then do
+                        Call Display What"("I") REMOVED"
+                        SendMsg.I    = ""
+                        NbrMsgToPost = NbrMsgToPost - 1
+                     End
+                     Else
+                        Call Display What"("I") KEPT"
+                  End
+               End
+            End
+            Call BalUnlock
+         End
+         Call CheckTmstp
+      End
+
+      Otherwise
+         Call Display "UNSUPPORTED COMMAND "Cmd
+   End
+End
+Call BalUnlock
+return
+
+CheckTmstp:
+if InitBalDone = 0 then return
+
+SIGNAL ON SYNTAX NAME CheckTmstpR
+tmptmstp = Stream(BalName,'c','query datetime')
+SIGNAL ON SYNTAX NAME StandardSyntax
+if tmptmstp \= BalTmstp then do
+   if BalGet() = 0 then do
+      tmptmstp = Stream(BalName,'c','query datetime')
+      BalTmstp = tmptmstp
+   End
+End
+CheckTmstpR:
+SIGNAL ON SYNTAX NAME StandardSyntax
+return
+
+BalCheckLock:
+if BalLock = "" then
+   BalLocked = 1
+else do
+   Status = Strip(Stream(BalLock,"c","open write"))
+   if Status = "READY:" then
+      BalLocked = 0
+   else
+      BalLocked = 1
+end
+return BalLocked
+
+BalUnlock:
+if BalLocked = 1 | BalLock = "" then return
+Status    = Stream(BalLock,'c','close')
+BalLocked = 1
+return
+
+
+BalOpen:
+Do 5
+   if BalCheckLock() = 0 then Leave
+   Call Sleep 1
+End
+
+if BalLocked = 1 then do
+   Call Display "BAL IS BUSY - AUTOMATIC TRY LATER ON"
+   TryLater = 1
+End
+Else do
+   TryLater = 0
+End
+Return TryLater
+
+BalClose:
+if BalLocked = 0 then Call BalUnlock
+TryLater = 0
+return
+
+BalAddSomething:
+Parse arg tUsr tData
+
+TimeAndDate = "TIMESTAMP["DATE("E")"-"TIME("L")"]"
+
+if Anonymous = 0 then
+   Msg = "FROM "User" TO USER="tUsr","TimeAndDate","tSome"="tData
+else
+   Msg = "FROM ? TO USER="tUsr","TimeAndDate","tSome"="tData
+Return
+
+BalAddMsg:
+Parse arg tUsr tData
+tSome = "MSG"
+Call BalAddSomething tUsr tData
+Call BalAddData
+return
+
+BalAddAck:
+Parse arg tUsr tData
+tSome = "ACK"
+Call BalAddSomething tUsr tData
+Call BalAddData
+return
+
+BalAddCmd:
+Parse arg tUsr tData
+tSome = "CMD"
+Call BalAddSomething tUsr tData
+Call BalAddData
+return
+
+BalAddFile:
+Parse arg tUsr tData
+
+TimeAndDate = "TIMESTAMP["DATE("E")"-"TIME("L")"]"
+
+if Stream(tData,'c','QUERY EXISTS') = "" then do
+   /* Clear data because file doen't exist */
+   AddOk = 2
+   return
+end
+
+TmpFile = SysTempFileName(BalPath"BAL?????")
+fName   = FileSpec('name',tData)
+if Anonymous = 0 then
+   Msg = "FROM "User" TO USER="tUsr","TimeAndDate",FILE="TmpFile",NAME="fName
+else
+   Msg = "FROM ? TO USER="tUsr","TimeAndDate",FILE="TmpFile",NAME="fName
+
+'COPY 'tData' 'TmpFile' /B > nul 2>&1'
+if rc = 0 then
+   Call BalAddData
+Else do
+   Call Display "COPY FILE "tData" FAILED"
+   AddOk = 2
+End
+return
+
+BalAddData:
+if BalName = "" then do
+   AddOk = 2
+   return
+end
+
+if BalOpen() \= 0 then do
+   AddOk = 0
+   return
+end
+Msg    = 'PROCESS='ProcessName' 'Msg
+Status = LineOut(BalName,Msg)
+
+if Status = 0 then
+   AddOk = 1
+Else
+   AddOk = 0
+
+Status = LineOut(BalName)
+Return
+
+
+BalGet:
+TryLater = 1
+if BalName = "" then return TryLater
+if BalOpen() \= 0 then return TryLater
+
+DoIt = 0
+If Stream(BalName,'c','query exists') \= "" then
+   If Stream(BalName,'c','query size') > 0 then DoIt = 1
+
+If TryLater = 0 & DoIt = 1 then do
+   'cp 'BalName' 'FicMailTmp' > nul 2>&1'
+   if rc = 0 then do
+      if Stream(FicMailTmp,'c','open read') = 'READY:' then do
+         'rm 'BalName' > nul 2>&1'
+
+         Do while Lines(FicMailTmp) > 0
+            L = LineIn(FicMailTmp)
+            Parse var L a"PROCESS="sProcess" FROM "Who" TO USER="sUsr","TimeAndDate","What"="tData
+            if a = "CANCELED" then sUsr = ""
+
+            if sUsr \= User then
+               Status = LineOut(BalName,L)
+            else do
+               Parse var TimeAndDate x"["TimeAndDate"]"
+
+               Call History
+               Select
+                  When What = "MSG" then do
+                     Call DoBeep 440,100
+                     Call SysOut "AT "TimeAndDate" RECEIVED 1 MSG FROM "Who": "tData
+                     If Who \= "?" then Rc = PostMessage( ProcessName, "", "SEND ACK TO "Who" "tData )
+                  End
+                  When What = "ACK" then do
+                     Call SysOut "AT "TimeAndDate" RECEIVED 1 ACK FROM "Who": "tData
+                     Call Display "AT "TimeAndDate" RECEIVED 1 ACK FROM "Who": "tData
+                  End
+                  When What = "CMD" then do
+                     If Pos('PASSWORD', Translate(tData)) = 1 then do
+                        Parse var tData "PASSWORD("tPwd")"tData
+                        tData = strip(tData)
+                        tPwd  = strip(tPwd)
+                     End
+                     else tPwd = ""
+                     Call SysOut "AT "TimeAndDate" RECEIVED 1 CMD FROM "Who": "tData
+                     If Who \= "?" then Rc = PostMessage( ProcessName, "", "SEND ACK TO "Who" "tData )
+                     if tPwd = UserPwd then do
+                        'echo execute 'tData
+                        If Rc = 1 then 'DETACH 'tData
+                     End
+                     else do
+                        Call Display "INVALID PASSWORD"
+                        If Who \= "?" then Rc = PostMessage( ProcessName, "", "SEND MSG TO "Who" PASSWORD VIOLATION !!!" )
+                     end
+                  End
+                  When What = "FILE" then do
+                     Call DoBeep 440,100
+                     Parse var tData lName",NAME="fName
+                     TmpFile = SysTempFileName("mail/BAL?????")
+                     tData   = lName
+                     Call SysOut "AT "TimeAndDate" RECEIVED 1 FILE("fName") FROM "Who": "TmpFile
+                     'cp 'tData' 'TmpFile' > nul 2>&1'
+                     if rc = 0 then do
+                        'rm 'tData' > nul 2>&1'
+                        If Who \= "?" then Rc = PostMessage( ProcessName, "", "SEND ACK TO "Who" (OK)-"tData"-"TmpFile )
+                     End
+                     else Do
+                        If Who \= "?" then Rc = PostMessage( ProcessName"", "SEND ACK TO "Who" (ERR)-"tData )
+                        Call Display "COPY FAILED - FROM "tData" TO "TmpFile
+                        L      = "CANCELED "L
+                        Status = LineOut(BalName,L)
+                     End
+                  End
+                  Otherwise
+                     Nop
+               End
+            End
+         End
+         Status = Stream(FicMailTmp,'c','close')
+         Status = Stream(BalName,'c','close')
+         'rm 'FicMailTmp' > nul 2>&1'
+      End
+      if Stream(BalName,'c','query exists') = "" then do
+         x = Stream(BalName,'c','open write')
+         x = Stream(BalName,'c','close')
+      End
+      Call BalUnlock
+   End
+End
+return TryLater
+
+History:
+if NoFicOut = 1 then return
+Status = LineOut(LocalBal,L)
+return
+
+DoBeep:
+Parse arg p1, p2
+return

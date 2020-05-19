@@ -1,0 +1,3 @@
+#!/usr/bin/ksh
+cat skl/q.skl skl/api.skl > q.rexx 
+cat skl/qtop.skl skl/api.skl > qtop.rexx 

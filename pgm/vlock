@@ -1,0 +1,139 @@
+Main: /* ISPF_local */
+
+tmB = 0
+if ProcessInitialized = 0 then do
+
+   InitDone = 0
+   SharedQ  = AllocQueue()
+
+   Call ispexec_tbclose('vlock')
+   Call ispexec_tbend('vlock')
+   Call ispexec_tberase('vlock')
+   namelist = "pn ty nbr rs"
+
+End
+
+Select
+   When msgCmd = SysVars.SysLInit then do
+      InitDone = 1
+      Rc       = SendMessage( , "SYS_HOOK", "ADD:LOCKS" )
+      Call Lister
+   End
+
+   When msgCmd = SysVars.SysLEnd then
+      Rc = PostMessage( , "SYS_HOOK", "REMOVE" )
+
+   When msgCmd = SysLIdle & InitDone = 1 then
+      Nop /* Call Lister */
+
+   When msgId = "MSG_HOOK" & InitDone = 1 then
+      Call Lister
+
+   OtherWise
+      Nop
+
+End
+WaitingIdle = WaitingIdle + tmB
+Return
+
+Lister:
+
+Get   = SendMessage( , "SYS_HOOK", "LIST:LOCKS:"SharedQ )
+
+if Get = "DONE" then do
+
+   Call ThrowLogD "LOK CLEAR"
+   Call ispexec_tbcreate('vlock names(pn ty nbr rs)')
+
+   Avant = SetQueue( SharedQ )
+   Echec = 0
+
+   do while Queued() > 0
+
+      Pull Ln
+      Parse var Ln Pn":"PnI
+
+      if Left( Pn, 3 ) = "(#)" then do
+
+         Parse var Pn ")"Pn
+         Echec = 1
+
+      End
+
+      Do PnI
+
+         Pull Ln
+         Parse var Ln Rs":"Ty":"nbr
+
+         if Ty = "S" then
+            Ty = "Shared   "
+         else
+            Ty = "Exclusive"
+
+         if Echec = 1 then nbr = "Wait"
+
+         Call ispexec_tbadd('vlock')
+         Call ThrowLogD "LOK "Pn":"Rs":"Ty":"nbr
+
+      End
+
+   End
+   Rc = SetQueue( Avant )
+
+   Call ispexec_tbtop('vlock')
+
+   tmA = Time('E')
+   Call ThrowLogD "LOK DISPLAY"
+   Call ispexec_tbdispl('vlock panel(vlock)')
+   tmB = tmB + ( Time('E') - tmA )
+
+/*   if rc >= 8 then EndForce = 2 */
+
+   Call ispexec_tbclose('vlock')
+   Call ispexec_tbend('vlock')
+   Call ispexec_tberase('vlock')
+
+End
+
+return
+
+/* -----------------------------------------------------------------------------------
+   ispexec_tbdispl
+-------------------------------------------------------------------------------------- */
+ispexec_tbdispl:
+Parse Arg tbname" panel("tbpanel")"
+
+ZFDrive = ""
+ZFPath1 = ""
+ZFPath2 = ""
+ZFPath3 = ""
+ZFName  = ""
+ZCmd    = ""
+ZTDSels = ""
+
+/* If tbpanel \= "" Then Do */
+   Address SYSTEM 'clear'
+   Say "                                  VERROUS"
+   Say ""
+   Say "Proprietaire"
+   Say "                  Mode        Nombre    Identifiant"
+   Say "=========================================================="
+   J = ispexec_fnretrieve(tbname)
+   If J > 0 Then
+      Do I = 1 To tblist.J.Lines
+         Call ispexec_fnretrievecols J, I
+         Say strTab(pn,15)"  "strTab(ty,5)"      "strTab(nbr,8)" "rs
+      End
+/* End */
+
+Return 0
+
+strTab: PROCEDURE
+Parse Arg strV, strL
+
+Res = strV
+Do I = Length(strV) to strL
+   Res = Res' '
+End
+
+Return Res

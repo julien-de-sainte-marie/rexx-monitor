@@ -1,0 +1,236 @@
+/*************************************************************************************
+                           PROLOGUE des outils de MONITOR
+                           ==============================
+Ce produit est un graticiel (houla...)
+Ecrit et maintenu par Julien de Sainte Marie
+mailto:julien.desaintemarie@unilog.fr
+
+****************************************************************************************/
+Parse Arg ProcessName" "Reste
+Trace Off
+
+ProcessName = Strip( ProcessName )
+if ProcessName = "" then do
+   Parse Source A1 A2 FullProcessName Reste
+
+   ProcessName = FileSpec( "name", FullProcessName )
+   Parse var ProcessName ProcessName"."Reste
+End
+
+ProcessName = Translate(Strip( ProcessName ))
+
+/*
+if Length( ProcessName ) > 8 then do
+   Say "Nom du process trop grand (8 car. maximum) !"
+   Return
+End
+*/
+
+address SYSTEM 'echo $PPID |rxqueue'
+Pull SysVars.PID
+
+share                   = "ENVIRONMENT"
+SysVars.SysVersion.0    = 3
+SysVars.SysVersion.1    = "MOM$ version 2.1"
+SysVars.SysVersion.2    = ""
+SysVars.SysVersion.3    = ""
+SysVars.SysPath         = VALUE("PWD",,share)
+SysVars.SysTimerEnabled = 0
+SysVars.SysInSysout     = 0
+SysVars.SysTimeReset    = Time('R')
+SysVars.SysLockPath     = "./lock/"
+SysVars.SysQueue        = "PIPE"
+SysVars.SysMonName      = "MONITOR"
+SysVars.SysLTimeOut     = "!TIMEOUT!"
+SysVars.SysLHalt        = "!HALT!"
+SysVars.SysLIdle        = "!IDLE!"
+SysVars.SysLInit        = "!INIT!"
+SysVars.SysLBusy        = "!BUSY!"                 /* New */
+SysVars.SysLDeadLock    = "!DEADLOCK!"             /* New */
+SysVars.SysLCommit      = "COMMIT"                 /* New */
+SysVars.SysLEnd         = "END"
+SysVars.SysWhoAmI       = ""
+SysVars.SysStopping     = 0
+SysVars.SysTimerEnable  = 0
+SysVars.soSay           = "0"
+SysVars.SysElapsedIdle  = 0
+SysVars.SysElapsedCmd   = 0
+SysVars.SysElapsedAll   = 0
+SysVars.SysRacine       = ""
+SysVars.fileWSOCK       = "/etc/xchglistener.ini"
+SysVars.SysWriteSysout  = GetProfileString( , "SYSOUT", "TRACE", "NO" )
+SysVars.SysLoopDelay    = GetProfileString( , "SYSTEM", "LOOP_DELAY", "1" )
+SysVars.SysLoopBreak    = GetProfileString( , "SYSTEM", "LOOP_BREAK", "1" )
+SysVars.SysTSleep       = GetProfileString( , "SYSTEM", "LOOP_SLEEP", "0.5" )
+SysVars.SysLoopResend   = GetProfileString( , "SYSTEM", "LOOP_RESEND", "5" )
+SysVars.SysLoopForceTO  = GetProfileString( , "SYSTEM", "LOOP_FORCETIMEOUT", "5" )
+SysVars.SysLoopWM       = GetProfileString( , "SYSTEM", "LOOP_WAITMESSAGE", "0.5" )
+SysVars.SysDetectMon    = Translate(GetProfileString( , "SYSTEM", "DETECT_RUN_LOGON", "YES" )) /* JSM 13.03.2003 Here */
+SysVars.SysStopRedoT    = GetProfileString( , "SYSTEM", "LOOP_BEFORE_FORCE", "100" )
+SysVars.SysSendMessageQueue = ""
+SysVars.SysProcessLockName  = SysVars.SysLockPath""SysVars.SysMonName".LOK"
+SysVars.TID             = "0"
+SysVars.PPRIO           = "0"
+SysVars.TPRIO           = "0"
+SysVars.PTIME           = "0"
+SysVars.SysEtatQueue    = "ETAT_CPU"
+SysVars.SysPushQueue    = 0
+CpuQueue                = "PIPE_CPU"
+ResourceLocked          = SysLCommit
+AnswerQueue             = ""
+CreatedProcess          = 0
+ParentQ                 = ""
+LockedProcess           = 0
+CtrlAttn                = 0
+LocalQueue.0            = 0
+LocalProcess.0          = 0
+TimeToWait              = 1
+NumberProcess           = 0
+FirstInstance           = 0
+ProcessInitialized      = 0
+ProcessLockName         = SysVars.SysLockPath""ProcessName".LOK"
+EndForce                = 0
+WaitingIdle             = 0
+devnull                 = " > /dev/null 2>&1"
+wsockIPP                = Strip(GetProfileString(,"SYSOUT","WSOCKIP",""))
+
+Call getWSOCKIP
+
+if ProcessName = SysVars.SysMonName then
+   IAmMonitor = 1
+Else
+   IAmMonitor = 0
+
+rep            = VALUE("PIP_REP",,share)
+drive          = VALUE("PIP_DRV",,share)
+
+if strip(rep)   = "" then rep   = "/home/monitor"
+if strip(drive) = "" then drive = ""
+
+curdir         = DIRECTORY()
+PipDir         = drive""rep
+newdir         = DIRECTORY(PipDir)
+
+if IAmMonitor = 0 then do
+   if SysVars.SysDetectMon = "YES" Then /* JSM 13.03.2003 Here */
+      if Stream( SysVars.SysProcessLockName, 'c', 'query exists' ) = "" then do
+         Say "Le moniteur n'est pas actif !"
+         Exit
+      End
+End
+Else do
+   Address SYSTEM 'rm lock/* 1>/dev/null 2>&1' /* */
+End
+
+if Stream( ProcessLockName, 'c', 'query exists' ) = "" then do
+   FirstInstance  = 1
+   Rc             = Stream( ProcessLockName, 'c', 'open write' )
+   Rc             = Stream( ProcessLockName, 'c', 'close' )
+End
+
+if IAmMonitor = 1 then Call MonitorPrologue
+
+Signal On Syntax Name StandardSyntax0
+Call   On Halt   Name CallNoHalt
+
+IsCreating = 1
+if CreateProcess( ProcessName ) = 0 then do
+   Say "Impossible de creer le process !"
+   Return
+End
+IsCreating = 0
+
+Signal On Syntax Name StandardSyntax
+
+Call ThrowLog "In loop"
+
+if IAmMonitor = 0 then
+   Call SysMainLoop
+Else
+   Call MonSysMainLoop
+
+Call ThrowLog "Out loop"
+/* -----------------------------------------------------------------------------------
+   StandardSyntax
+-------------------------------------------------------------------------------------- */
+StandardSyntax:
+Trace Off
+Signal Off Syntax
+
+Call ThrowLog "FREEING"
+
+tm = FreeProcess()
+do I = 1 to LocalQueue.0
+   if LocalQueue.I \= "" then
+      Call RxQueue 'Delete', LocalQueue.I"@127.0.0.1"
+End
+
+if FirstInstance  = 1 then
+   Address SYSTEM 'rm 'ProcessLockName' 1>/dev/null 2>&1'
+
+Call ThrowLog "DOWN"
+
+If IAmMonitor = 1 then Do
+   Call MonitorStopQueueSys
+End
+
+exit
+/* =================================================================================== */
+
+
+/* -----------------------------------------------------------------------------------
+   StandardSyntax0
+-------------------------------------------------------------------------------------- */
+StandardSyntax0:
+Say SysVars.SysMonName" n'est pas actif !!!"
+exit
+/* =================================================================================== */
+
+
+
+/* -----------------------------------------------------------------------------------
+   StandardHalt
+-------------------------------------------------------------------------------------- */
+StandardHalt:
+Trace Off
+
+Call ProcStandardHalt
+
+Tm = SetQueue( FormatQueue( SysVars.SysWhoAmI ))
+Call PushData "SYS_STOP~"SysVars.SysLEnd
+Return
+/* =================================================================================== */
+
+
+
+/* -----------------------------------------------------------------------------------
+   CallNoHalt
+-------------------------------------------------------------------------------------- */
+CallNoHalt:
+Call On Halt Name CallNoHalt
+Call ProcStandardHalt
+Return
+/* =================================================================================== */
+
+
+
+/* -----------------------------------------------------------------------------------
+   ProcStandardHalt
+-------------------------------------------------------------------------------------- */
+ProcStandardHalt:
+if LockedProcess = 0 then CtrlAttn = 1
+Return
+/* =================================================================================== */
+
+/* -----------------------------------------------------------------------------------
+   SayHelp
+-------------------------------------------------------------------------------------- */
+SayHelp:
+Trace Off
+
+Do I = 1 to Help.0
+   Say Help.I
+End
+Return
+/* =================================================================================== */
+

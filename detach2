@@ -1,0 +1,4 @@
+#!/usr/bin/ksh
+PrName=$1
+shift
+rexx cmd/$PrName.rexx "$*" > /dev/null 2>&1 &

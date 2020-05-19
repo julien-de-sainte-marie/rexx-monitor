@@ -1,0 +1,311 @@
+/*************************************************************************************
+                           BOUCLE des outils de MONITOR
+                           ============================
+****************************************************************************************/
+SysMainLoop:
+nbMsg       = 0
+SetTrace    = 0
+TimeToCheck = 0
+WaitingIdle = 0
+nbIdle      = 0
+nbIdleMax   = 5
+MonitorStat = 0
+
+Call Sysout "Entering SysMainLoop ..."
+do FOREVER
+
+   CtrlAttn    = 0
+   LoopTimeAll = Time('E')
+
+   Call getWSOCKIP
+
+   Call monSleep SysVars.SysLoopBreak
+   nbMsg = QUEUED()
+
+   if nbMsg > 0 then do
+
+      xSysGetCmd = PullData()
+      xSysGetCmd = Strip( xSysGetCmd )
+
+      Call Sysout "SysMainLoop pulled "GetQueueName()": "xSysGetCmd
+
+      if Left( xSysGetCmd, 1 ) = '~' then do
+         GetCmd = Right( xSysGetCmd, Length( xSysGetCmd ) - 1 )
+         msgId  = ''
+      End
+      Else
+         Parse var xSysGetCmd msgId'~'GetCmd
+
+      msgCmd   = Strip( GetCmd )
+      msgId    = Translate( Strip( msgId ))
+
+      if Pos( ":", msgId ) > 0 then
+         Parse Var msgId msgId":"AnswerQueue
+      Else
+         AnswerQueue = ""
+
+      smsgCmd  = Translate( Strip( GetCmd ))
+      smsgId   = Translate( Strip( msgId ))
+
+      if IsSysCmd() = 0 then do
+
+         if SysVars.SysTimerEnabled = 0 | EndForce = 1 then do
+
+            WaitingIdle = 0
+
+            if MonitorStat = 1 then
+               Rc = PostMessage( , "SYS_ETAT", "A" )
+
+            If Translate(msgCmd) = SysVars.SysLEnd Then msgCmd = SysVars.SysLEnd
+            Call SysOut "Calling main with "msgCmd
+
+            LoopTime = Time('E')
+
+            if SetTrace = 1 then Trace I
+            
+            Call Main msgCmd
+            
+            Trace Off
+            trTime         = Time('E') - LoopTime
+            SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
+            if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
+
+            if MonitorStat = 1 then
+               Rc = PostMessage( , "SYS_ETAT", "I" )
+
+            if WaitingIdle > 0 then
+               SysVars.SysElapsedCmd = SysVars.SysElapsedCmd - WaitingIdle
+
+            if AnswerQueue \= "" then do
+
+               if AnswerQueue = "ANSWEREQUEUE" then AnswerQueue = ""
+               Rc             = PostMessage( , "SYS_ANSWERE", AnswerQueue":"msgResult )
+
+            End
+
+         End
+         Else Do
+            Call QueueData xSysGetCmd
+            smsgId = ""
+            smsgCmd = ""
+         End
+      End
+
+      if smsgId = "SYS_STOP" then
+         EndForce = 1
+      Else
+      if smsgId = "SYS_INIT" then
+         ProcessInitialized = 1
+      Else
+      if smsgCmd = SysVars.SysLEnd then
+         EndForce = 1
+
+   End
+   Else do
+
+      if SysVars.SysTimerEnabled = 0 then do
+
+         WaitingIdle = 0
+         GetCmd      = SysVars.SysLIdle
+         msgCmd      = SysVars.SysLIdle
+         msgId       = ""
+
+         if MonitorStat = 1 then
+            Rc = PostMessage( , "SYS_ETAT", "N" )
+            
+         LoopTime = Time('E')
+         Call SysOut "Calling main with "msgCmd
+
+         if SetTrace = 1 then Trace I
+         
+         Call Main msgCmd
+         
+         Trace Off
+         
+         trTime         = Time('E') - LoopTime
+         SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
+         if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
+
+         if MonitorStat = 1 then
+            Rc = PostMessage( , "SYS_ETAT", "I" )
+
+      End
+
+      Do TimeToWait
+         Call monSleep SysVars.SysLoopDelay
+         if Queued() > 0 then Leave
+      End
+
+   End
+
+   if CtrlAttn = 1 then Leave
+   if EndForce > 0 then Leave
+
+   TimeToCheck             = TimeToCheck + 1
+   SysVars.SysElapsedAll   = SysVars.SysElapsedAll + ( Time('E') - LoopTimeAll )
+   SysVars.SysElapsedIdle  = SysVars.SysElapsedIdle + WaitingIdle
+   WaitingIdle             = 0
+
+   if SysVars.SysElapsedAll < ( SysVars.SysElapsedIdle + SysVars.SysElapsedCmd ) then
+      SysVars.SysElapsedAll = SysVars.SysElapsedIdle + SysVars.SysElapsedCmd + 0.01
+
+   if TimeToCheck = 10 then Do
+      if SysVars.SysDetectMon = "YES" Then /* JSM 13.03.2003 Here */
+         if Stream( SysVars.SysProcessLockName, 'c', 'query exists' ) = "" then
+            Leave
+
+      TimeToCheck = 0
+   End
+
+   Avant          = SetQueue( CpuQueue )
+   SysVars.PTIME  = 0
+   Ln             = SysVars.SysWhoAmI"~"SysVars.PTIME":"SysVars.SysElapsedCmd":"SysVars.SysElapsedIdle":"SysVars.SysElapsedAll
+   Call QueueData Ln
+   Apres = SetQueue( Avant )
+
+   if CtrlAttn = 1 then Call StandardHalt
+
+End
+Call Sysout "Leaving SysMainLoop ..."
+Return
+/* =================================================================================== */
+
+
+
+/* -----------------------------------------------------------------------------------
+   IsSysCmd
+-------------------------------------------------------------------------------------- */
+IsSysCmd:
+
+Select
+
+   When msgId = "SYS_ENDWAIT" then do
+
+      SysVars.SysTimerEnabled   = 0
+      iscOk                     = 1
+
+   End
+
+   When msgId = "SYS_BEGINWAIT" then do
+
+      SysVars.SysTimerEnabled   = 1
+      iscOk                     = 1
+
+   End
+
+   When msgId = "SYS_BEGINSTAT" then do
+
+      MonitorStat       = 1
+      iscOk             = 1
+
+   End
+
+   When msgId = "SYS_ENDSTAT" then do
+
+      MonitorStat       = 0
+      iscOk             = 1
+
+   End
+
+   When msgId = "SYS_STOPFORCE" then do
+
+      EndForce = 1
+      iscOk    = 1
+
+   End
+
+   When msgId = "SYS_STOP" then do
+
+      EndForce = 1
+      msgCmd   = SysVars.SysLEnd
+      iscOk    = 0
+
+   End
+
+   When msgId = "SYS_LOCKPROCESS" then do
+
+      LockedProcess  = 1
+      iscOk          = 1
+
+   End
+
+   When msgId = "SYS_UNLOCKPROCESS" then do
+
+      LockedProcess  = 0
+      iscOk          = 1
+
+   End
+
+   When msgId = "SYS_ACK" then do
+
+      iscOk    = 0
+
+   End
+
+   When msgId = "USR_MSG" then
+
+      Select
+
+         When Translate( msgCmd ) = "DUMPVARIABLES" then DO
+
+            if SysVars.SysRacine = "" then
+               SysVars.SysRacine = GetProfileString( , "LOG", "RACINE", "" )
+            if SysVars.SysRacine \= "" then do
+               soQ    = FormatQueue( SysVars.SysWhoAmI )
+               soName = SysVars.SysRacine"/"soQ".dumpvariables"
+               Call SysDumpVariables soName
+            End
+
+         End
+
+         When Translate( msgCmd ) = "WAIT" then do
+
+            Call ProcStartTimer
+            IscOk = 1
+
+         End
+
+         When Translate( msgCmd ) = "WAKE" then do
+
+            Call ProcStopTimer
+            IscOk = 1
+
+         End
+
+         When Translate( msgCmd ) = "TRACE ON" then do
+
+            SetTrace = 1
+            IscOk    = 1
+
+         End
+
+         When Translate( msgCmd ) = "TRACE OFF" then do
+
+            SetTrace = 0
+            IscOk    = 1
+
+         End
+
+         When Translate( Left( msgCmd, 5 )) = "EXEC " then do
+
+            IscOk    = 1
+            Parse Var msgCmd "EXEC "tmpCmd
+            Interpret tmpCmd
+
+         End
+
+         OtherWise
+
+            IscOk = 0
+   End
+
+   OtherWise
+
+      iscOk = 0
+
+End
+
+if iscOk = 1 then Call ProcUserHook
+
+Return iscOk
+/* =================================================================================== */

@@ -1,0 +1,360 @@
+Main: /* ISPF_local */
+
+tmB = 0
+if ProcessInitialized = 0 then do
+
+   InitDone    = 0
+   SharedQ     = AllocQueue()
+   TimeToWait  = 2
+   keyBuffer   = ""
+   keyAction   = ""
+   Processes.0 = 0
+
+   Call ispexec_tbclose('activity')
+   Call ispexec_tbend('activity')
+   Call ispexec_tberase('activity')
+
+End
+
+Select
+   When msgCmd = SysVars.SysLInit then do
+      InitDone = 1
+      Rc       = SendMessage( , "SYS_HOOK", "ADD:PROCESS" )
+      Rc       = SendMessage( , "SYS_BEGINSTAT", "" )
+      Call Lister
+   End
+
+   When msgCmd = SysVars.SysLEnd then do
+      Rc = PostMessage( , "SYS_HOOK", "REMOVE" )
+      Rc = PostMessage( , "SYS_ENDSTAT", "" )
+   End
+
+   When msgCmd = SysVars.SysLIdle & InitDone = 1 then
+      Call Lister
+
+   When msgId = "MSG_HOOK" & InitDone = 1 then
+      Call Lister
+
+   OtherWise
+      Nop
+
+End
+WaitingIdle = WaitingIdle + tmB
+Return
+
+Lister:
+
+/***
+   Vider la file d'attente des SYS_ETAT et valoriser l'état des process
+***/
+Avant = SetQueue(SysVars.SysEtatQueue)
+nbi   = Queued()
+Do Nbi
+   Parse Pull Item
+   Parse var Item msgId"~"Pn"_"Qn"~"Reste"#"Etat
+   Processes.Pn.Qn = Etat
+End
+Call SetQueue(Avant)
+
+
+
+Get   = SendMessage( , "SYS_HOOK", "LIST:PROCESS:"SharedQ )
+
+if Get = "DONE" then do
+
+   Call ThrowLogD "CPU CLEAR"
+   Call ispexec_tbcreate('activity names(pn qn iloop iwait tall tcmd tidle telaps tetat)')
+
+   zCmd  = ""
+   Avant = SetQueue( SharedQ )
+
+   do while Queued() > 0
+
+      Pull Ln
+      Parse var Ln Pn":"PnI
+
+      Do PnI
+
+         Pull Ln
+         If Ln = " " then Iterate
+
+         Parse var Ln Qn":"Loop":"Lock":"Wait":"WaitT":"tAll":"tCmd":"tIdle":"tElaps":"Etat
+         Etat = Processes.Pn.Qn
+         If Length(Etat) > 2 Then Etat = " n/a "
+
+         if Loop = ""  then
+            ILoop = "N"
+         else
+            ILoop = "Y"
+
+         if Lock = "0" then
+            Lock = " "
+         else
+            Lock = "*"
+
+         if Wait = "0" then
+            IWait = "N"
+         else
+            IWait = "Y"
+
+         Select
+            When Etat = "I" then
+               tetat = "Inactif"
+
+            When Etat = "A" then
+               if ILoop = "Y" | IWait = "Y" then
+                  tetat = "Attente"
+               Else
+                  tetat = "Actif"
+
+            When Etat = "N" then
+               tetat = "Idle"
+
+            OtherWise
+               tetat = Strip(Etat)
+
+         End
+
+         Pn = Strip( Pn )
+         Qn = Strip( Qn )
+
+         Call ispexec_tbadd('activity ')
+         Call ThrowLogD "CPU "Pn":"ILoop":"Lock":"IWait":"tetat":"WaitT":"tAll":"tCmd":"tIdle":"tElaps
+
+      End
+
+   End
+   Rc = SetQueue( Avant )
+
+   Call ispexec_tbtop('activity')
+
+   tmA = Time('E')
+   Call ThrowLogD "CPU DISPLAY"
+   rc  = ispexec_tbdispl('activity panel(activity)')
+   tmB = tmB + ( Time('E') - tmA )
+
+   select
+      when rc >= 8 then
+         EndForce = 2
+      when rc < 8 then do
+         if (ztdsels>0) then do
+            do while (ztdsels>1)
+               call TrtSel
+               rc =  ispexec_tbdispl('activity')
+            End
+            call TrtSel
+         End
+         if zCmd \= "" then do
+            zCmd = Translate( Strip( zCmd ))
+            Select
+               When zCmd = "LOG" then
+                  Call ViewLog
+               When zCmd = "DEBUG" then
+                  Call ViewDebug
+               When Left(zCmd,1) = "/" then do
+                  Parse var zCmd "/"pmId","pmData
+                  Address SYSTEM 'Call Q ,'pmId','pmData
+               End
+               OtherWise
+                  Address SYSTEM 'Call Q 'zCmd
+            End
+         End
+      End
+   End
+   Call ispexec_tbclose('activity')
+   Call ispexec_tbend('activity')
+   Call ispexec_tberase('activity')
+
+End
+RETURN
+
+TrtSel:
+Select
+   When Sel = "D" then
+      Rc = PostMessage( Pn, , "WAIT" )
+
+   When Sel = "A" then
+      Rc = PostMessage( Pn, , "WAKE" )
+
+   When Sel = "P" then
+      Rc = PostMessage( , "SYS_KILLPROCESS" , Pn )
+
+   When Sel = "O" then
+      Rc = PostMessage( Pn, , "END" )
+
+   When Sel = "S" then
+      Call ViewProcessLog( Qn )
+
+   OtherWise
+      Nop
+End
+Return
+
+ViewProcessLog:
+Arg vpQ
+LogFileName = GetProfileString( , "LOG", "Racine", "" )
+if LogFileName = "" then
+   Call ispexec_setmsg('msg(LOGW001)')
+else do
+   aQ = Substr( vpQ, 1, 8 )"."Substr( vpQ, 12, 3 )
+   Call BuildEdit LogFileName"\"aQ
+End
+Return
+
+ViewLog:
+LogFileName = GetProfileString( , "LOG", "FileName", "" )
+if LogFileName = "" then
+   Call ispexec_setmsg('msg(LOGW001)')
+else do
+   Call BuildEdit LogFileName
+End
+Return
+
+ViewDebug:
+LogFileName = GetProfileString( , "LOG", "FileNameDebug", "" )
+if LogFileName = "" then
+   Call ispexec_setmsg('msg(LOGW002)')
+else do
+   Call BuildEdit LogFileName
+End
+Return
+
+BuildEdit:
+Arg aFile
+Call ispexec_vget('(ZFDrive ZFPath1 ZFPath2 ZFPath3 ZFName)')
+
+SaveD   = ZFDrive
+SaveP1  = ZFPath1
+SaveP2  = ZFPath2
+SaveP3  = ZFPath3
+ZFDrive = FileSpec( "Drive", aFile )
+ZFPath1 = FileSpec( "Path", aFile )
+ZFPath2 = ""
+ZFPath3 = ""
+ZFName  = FileSpec('NAME', aFile )
+ZCMD    = ""
+
+if Right( ZFPath1, 1 ) = '\' then
+   ZFPath1 = Left( ZFPath1, Length( ZFPath1 ) - 1 )
+
+Call ispexec_vput('(ZFDrive ZFPath1 ZFPath2 ZFPath3 ZFName ZCmd)')
+tmA = Time('E')
+'EDIT'
+tmB = tmB + ( Time('E') - tmA )
+
+ZFDrive = SaveD
+ZFPath1 = SaveP1
+ZFPath2 = SaveP2
+ZFPath3 = SaveP3
+ZFName  = ""
+Call ispexec_vput('(ZFDrive ZFPath1 ZFPath2 ZFPath3 ZFName)')
+Return
+
+
+/* -----------------------------------------------------------------------------------
+   ispexec_tbdispl
+-------------------------------------------------------------------------------------- */
+ispexec_tbdispl:
+Parse Arg tbname" panel("tbpanel")"
+
+ZFDrive = ""
+ZFPath1 = ""
+ZFPath2 = ""
+ZFPath3 = ""
+ZFName  = ""
+ZCmd    = ""
+ZTDSels = ""
+
+Address SYSTEM 'clear'
+Say "                                  ACTIVITY"
+Say ""
+Say "LOG-Visualiser la LOG du moniteur   DEBUG-Visualiser les messages du moniteur"
+Say "O-Stopper  D-Désactiver  A-Activer  P-Purger   S-Log du process"
+Say ""
+Say "Process                                --------------- TIME ---------------"
+Say "                  Queue                Loop Wait CPU              UserProc          Etat"
+Say "============================================================================================="
+J = ispexec_fnretrieve(tbname)
+If J > 0 Then
+   Do I = 1 To tblist.J.Lines
+      Call ispexec_fnretrievecols J, I
+      Say strTab(pn,15)"  "strTab(qn,20)" "strTab(iloop,3)" "strTab(iwait,3)""strTab(tall,15)" "strTab(tcmd,15)"  "tetat
+   End
+
+If getKey() = 0 Then Do
+   Say ""
+   Say "===> "keyBuffer
+End
+Else Do
+   If keyAction = "enter" Then ZCmd = keyBuffer
+   keyBuffer = ""
+   keyAction = ""
+End
+Return 0
+
+
+
+getKey:
+/***
+Call SysCurState('off')
+rK = 0
+Do Forever
+   cK = SysGetKey('n', 0.25)
+
+   If cK = 0 Then cK = SysGetKey('n')
+   If C2X(cK) \= "" Then Do
+      If isCmdKey(cK) = 1 Then Do
+         rK = 1
+         Leave
+      End
+      Else
+         keyBuffer = keyBuffer""cK
+   End
+   Else
+      Leave
+End
+****/
+Return rK
+
+
+isCmdKey:
+Arg kCmd
+
+ickRc = 0
+If Length(kCmd) > 1 Then Do
+   keyAction = cK
+   ickRc     = 1
+End
+Else
+   Select
+      When C2X(kCmd) = '0D' Then Do
+         ickRc     = 1
+         keyAction = "enter"
+      End
+      OtherWise
+         ickRc = 0
+   End
+
+Return ickRc
+
+
+strTab: PROCEDURE
+Parse Arg strV, strL
+
+Res = strV
+Do I = Length(strV) to strL
+   Res = Res' '
+End
+
+Return Res
+
+/***************************************************************************************
+   Prise en charge de certains messages systeme
+   --------------------------------------------
+
+   msgId    Identifiant du message
+   msgCmd   Commande associee au message
+
+****************************************************************************************/
+ProcUserHook:
+RETURN

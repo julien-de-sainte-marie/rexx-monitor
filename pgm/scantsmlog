@@ -1,0 +1,234 @@
+/* 
+                                          Analyse des journaux TSM 
+*/
+Main:
+
+/* Plusieurs images du process sont actives ? */
+If FirstInstance = 0 then do
+   tm = Display("Une autre instance du process est déjà active. Fin de cette instance.")
+   EndForce = 1
+   Return
+End
+
+Select
+   /* Fin du process demandée */
+   When msgCmd = SysVars.SysLEnd then do
+      Nop
+   End
+   /* Initialisation du process demandée */
+   When msgCmd = SysVars.SysLInit then do
+      tm = Display("Initialisation du process en cours.")
+      
+      tmpfile = "/tmp/scantsmlog.log"
+      
+      tm = Display("Initialisation du process terminée.")
+   End
+   /* Rien à faire ... */
+   When msgCmd = SysVars.SysLIdle then do
+      Nop
+   End
+   When Translate(Word(msgCmd,1)) = "ARCHIVE" then do
+      Call doArch
+   End
+   When Translate(Word(msgCmd,1)) = "SCAN" then do
+      Call doScan
+   End
+   When Translate(Word(msgCmd,1)) = "STATUS" then do
+      Call doStatus
+   End
+   OtherWise
+      Nop
+End
+Return
+
+/****************************************************************************
+      ARCHIVEr un journal TSM
+      -----------------------
+      
+      
+syntaxe : archive host=wwwww,file1=xxxxx,file2=yyyyy,target=zzzzz
+
+****************************************************************************/
+doArch:
+trace i
+Parse Var msgCmd x_cmd" "x_host","x_file1","x_file2","x_target
+Parse Var x_host p_host"="hostname
+Parse Var x_file1 p_file1"="serverfile
+Parse Var x_file2 p_file2"="clientfile
+Parse var x_target p_target"="targetdir
+
+
+/*****************************************************************
+ Traitement du fichier serverfile, si il existe.
+*****************************************************************/
+ladate_u = date('u')
+ladate_s = date('s')
+
+if serverfile \= "" then do
+	tsf 	= serverfile
+	do while Pos("/",tsf) \= 0 
+	   parse var tsf asup"/"tsf
+	End
+	if tsf 	= "" then do
+		Address System "ls -ltr "serverfile WITH OUTPUT STEM liste.
+		nbfile 	 = liste.0
+		lastfile = liste.nbfile
+		tsf 	 = lastfile
+		Parse Var tsf "start_backup_prod_"ladate".log"
+		/* on récupère donc [ladate] au format ddmmyyyy */
+		/* on utilise SUBSTR(string, start, [length], [pad]) */
+		annee 	 = SUBSTR(ladate, 5, 4)
+		mois  	 = SUBSTR(ladate, 3, 2)
+		jour  	 = SUBSTR(ladate, 1, 2)
+		ladate_u = mois"/"jour"/"SUBSTR(annee, 3, 2)	/* format mm/dd/yy */
+		ladate_s = annee""mois""jour			/* format aaaammdd */
+	End
+	Parse Var tsf  tsf"."extension
+	targetfile 	 = targetdir"/"hostname"_"tsf"_Arch_"date('s')"."extension
+	Address System "cp "serverfile" "targetfile
+	Tm 	= Display("Action=archive,host="hostname",file="serverfile",target="targetfile)
+	todsp	= VerifArchive( targetfile, "ARRET DES PROCESS ORACLE APPLICATIONS SUR PRD" )
+	Tm	= Display(todsp)
+End
+
+
+/*****************************************************************
+ Traitement du fichier clientfile, si il existe.
+*****************************************************************/
+if clientfile \= "" then do
+	tcf 	= clientfile
+	do while Pos("/",tcf) \= 0 
+	   parse var tcf asup"/"tcf
+	End
+	Parse Var tcf tcf"."extension
+	targetfile  = targetdir"/"hostname"_"tcf"_"date('s')"."extension
+	/******************************************************************
+	   la partie ci-dessous est a améliorer car elle ne fonctionne
+	   que si la sauvegarde se finie avant minuit...
+	******************************************************************/
+	Address System "rsh "hostname" grep "ladate_u" "filename" > "targetfile
+	Tm	= Display("Action=archive,host="hostname",file="clientfile",target="targetfile)
+	todsp	= VerifArchive( targetfile, "SCHEDULEREC OBJECT BEGIN" )
+	Tm	= Display(todsp)
+End
+
+
+
+return
+
+
+/********************************************************************************************
+      SCANner le log d'une sauvegarde TSM
+      -----------------------------------
+      
+      
+syntaxe : scan hos=xxxxx,inputdir=yyyyy,partname=zzzzz
+
+*/
+doScan:
+Parse Var msgCmd x_cmd" "x_host","x_indir","x_pname
+Parse Var x_host p_host"="hostname
+Parse Var x_indir p_indir"="inputdir
+Parse Var x_pname p_pname"="partname
+
+filename = inputdir"/"hostname"_"partname"_"date('s')
+
+tm       = Display("Action=scan,host="hostname",file="filename)
+
+do_display = 0
+ligne      = ""
+x_reste    = ""
+If Stream(filename, 'c', 'query exists' ) \= "" then Do
+   Tm = Stream(filename, 'c', 'open read' )
+   If Tm = 'READY:' then do
+      Do while Lines(filename) > 0
+         ligne = Strip(LineIn(filename))
+         Parse Var ligne x_date"   "x_time" "x_reste
+
+         Select 
+            When Left(x_reste, 28) = "--- SCHEDULEREC STATUS BEGIN" Then Do
+               do_display = 1
+            End
+            When Left(x_reste, 26) = "--- SCHEDULEREC STATUS END" Then Do
+               do_display = 0
+            End
+            OtherWise
+               if do_display = 1 then tm = Display(x_date"-"x_time": "x_reste) 
+         End
+      End
+      Tm = Stream(tmpfile, 'c', 'close')
+      
+      /* Est-ce que la dernière ligne lue correspond au mode écoute du dsmsched ? */
+      if x_reste = "Waiting to be contacted by the server." then
+         tm = Display("Le client TSM a terminé et attend d'être contacté à "x_date"-"x_time)
+      Else
+         tm = Display("Le client TSM n'a pas terminé la sauvegarde.")
+   End
+   else
+      tm = Display("Fichier temporaire non créé.")
+End
+return
+
+/************************************************************************************************
+      STATistique depUis le log d'une Sauvegarde TSM
+      ----------------------------------------------
+      
+      
+syntaxe : status host=xxxxx,file=yyyyy
+
+*/
+doStatus:
+Parse Var msgCmd x_cmd" "x_host","x_file
+Parse Var x_host p_host"="hostname
+Parse Var x_file p_file"="filename
+
+tm = Display("Action=status,host="hostname",file="filename)
+Address System "rm "tmpfile" > /dev/null 2>&1"
+Address System "rsh "hostname" tail -5 "filename" > "tmpfile
+
+do_display = 0
+ligne      = ""
+x_reste    = ""
+If Stream(tmpfile, 'c', 'query exists' ) \= "" then Do
+   Tm = Stream(tmpfile, 'c', 'open read' )
+   If Tm = 'READY:' then do
+      Do while Lines(tmpfile) > 0
+         ligne = Strip(LineIn(tmpfile))
+      End
+      Tm = Stream(tmpfile, 'c', 'close')
+      Address System "rm "tmpfile" > /dev/null 2>&1"
+      
+      /* Est-ce que la dernière ligne lue correspond au mode écoute du dsmsched ? */
+      if x_reste = "Waiting to be contacted by the server." then
+         tm = Display("Le client TSM a terminé et attend d'être contacté à "x_date"-"x_time)
+      Else
+         tm = Display("Le client TSM n'a pas terminé la sauvegarde.")
+   End
+   else
+      tm = Display("Fichier temporaire non créé.")
+End
+return
+
+
+/* -----------------------------------------------------------------------------------
+   VerifArchive
+-------------------------------------------------------------------------------------- */
+VerifArchive:
+Parse Arg tgf, cetxt
+
+If Stream(tgf, 'c', 'query exists' ) = "" then
+   todsp = "Erreur à la création du fichier "targetfile
+Else Do
+   If Stream(tgf, 'c', 'query size' ) = 0 then
+      todsp = "L'archivage du fichier "tgf" est vide"
+   Else Do
+      Address System "grep -c '"cetxt"' "tgf WITH OUTPUT STEM test.
+      if test.1 > 0 then
+      	todsp = "Fichier archivé sous "tgf
+      Else
+      	todsp = "le fichier archivé "tgf" est invalide"
+   End
+End
+
+return todsp
+/* =================================================================================== */

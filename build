@@ -1,0 +1,2 @@
+#!/usr/bin/ksh
+rexx build.rexx $1 $2

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+PrName=$1
+shift
+rexx cmd/$PrName.rexx "$*"
