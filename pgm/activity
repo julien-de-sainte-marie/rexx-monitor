@@ -30,7 +30,7 @@ Select
    End
 
    When msgCmd = SysVars.SysLIdle & InitDone = 1 then
-      Call Lister
+      Nop /* Call Lister */
 
    When msgId = "MSG_HOOK" & InitDone = 1 then
       Call Lister
@@ -43,6 +43,13 @@ WaitingIdle = WaitingIdle + tmB
 Return
 
 Lister:
+/***
+   Vider la file d'attente
+***/
+nbi   = Queued()
+Do Nbi
+   Parse Pull Item
+End
 
 /***
    Vider la file d'attente des SYS_ETAT et valoriser l'état des process

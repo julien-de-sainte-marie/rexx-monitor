@@ -1,0 +1,1 @@
+for q in `rxqueue /list`; do echo "$q ===> " `rxqueue $q /queued`; done

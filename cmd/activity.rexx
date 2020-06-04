@@ -19,10 +19,9 @@ End
 
 ProcessName = Translate(Strip( ProcessName ))
 
-address SYSTEM 'echo $PPID |rxqueue'
-Pull SysVars.PID
-
 share                   = "ENVIRONMENT"
+SysVars.FicName         = ProcessName
+SysVars.PID             = getpid()
 SysVars.SysVersion.0    = 3
 SysVars.SysVersion.1    = "MOM$ version 2.1"
 SysVars.SysVersion.2    = ""
@@ -45,12 +44,12 @@ SysVars.SysLEnd         = "END"
 SysVars.SysWhoAmI       = ""
 SysVars.SysStopping     = 0
 SysVars.SysTimerEnable  = 0
-SysVars.soSay           = "0"
 SysVars.SysElapsedIdle  = 0
 SysVars.SysElapsedCmd   = 0
 SysVars.SysElapsedAll   = 0
 SysVars.SysRacine       = ""
 SysVars.fileWSOCK       = "/etc/xchglistener.ini"
+SysVars.soSay           = GetProfileString( , "SYSOUT", "SAY", "NO" )
 SysVars.SysWriteSysout  = GetProfileString( , "SYSOUT", "TRACE", "NO" )
 SysVars.SysSleepDelay   = GetProfileString( , "SYSTEM", "SLEEP_DELAY", "1" )
 SysVars.SysSleepexDelay = GetProfileString( , "SYSTEM", "SLEEPEX_DELAY", "0.2" )
@@ -80,7 +79,7 @@ LockedProcess           = 0
 CtrlAttn                = 0
 LocalQueue.0            = 0
 LocalProcess.0          = 0
-TimeToWait              = 1
+TimeToWait              = GetProfileString( , "SYSTEM", "LOOP_TIMETOWAIT", "1" )
 NumberProcess           = 0
 ProcessInitialized      = 0
 ProcessLockName         = SysVars.SysLockPath""ProcessName".LOK"
@@ -116,14 +115,16 @@ if IAmMonitor = 0 then do
 End
 Else do
     SysVars.FirstInstance = 1
-    Address SYSTEM 'ps -eaf | grep 'psProcessName' | grep -v grep > /tmp/monitor.ps.list'
+    nbps = 0
+    Address SYSTEM 'ps -eaf | grep "'psProcessName'" | grep -v grep | grep -v 'SysVars.PID'> /tmp/monitor.ps.list'
     Do While Lines('/tmp/monitor.ps.list') > 0
         a=LineIn('/tmp/monitor.ps.list')
          if pos(psProcessName,a) > 0 then do
-                tempFirstInstance = 0
-                leave
+                nbps = nbps + 1
          end
     end
+    If nbps > 0 Then
+        tempFirstInstance = 0
    Address SYSTEM 'rm lock/* 1>/dev/null 2>&1' /* */
 End
 
@@ -1155,8 +1156,8 @@ If SysVars.SysWriteSysout = "YES" Then Do
       if SysVars.SysRacine = "" then
          SysVars.SysRacine = GetProfileString( , "LOG", "RACINE", "" )
       if SysVars.SysRacine \= "" then do
-         soQ    = FormatQueue( SysVars.SysWhoAmI )
-         soName = SysVars.SysRacine"/"soQ
+         soQ    = SysVars.FicName"_"SysVars.PID
+         soName = SysVars.SysRacine"/"soQ".sysout"
          Rc     = LineOut( soName, Time('L')": "soMsg )
       End
 
@@ -1166,7 +1167,7 @@ End
 If psoSay = "1" then
    Say soMsg
 
-If SysVars.soSay = "1" then
+If SysVars.soSay = "YES" then
    Say Time('L')": ("SysVars.SysWhoAmI")"soMsg
 
 Return
@@ -1813,7 +1814,7 @@ Select
    End
 
    When msgCmd = SysVars.SysLIdle & InitDone = 1 then
-      Call Lister
+      Nop /* Call Lister */
 
    When msgId = "MSG_HOOK" & InitDone = 1 then
       Call Lister
@@ -1826,6 +1827,13 @@ WaitingIdle = WaitingIdle + tmB
 Return
 
 Lister:
+/***
+   Vider la file d'attente
+***/
+nbi   = Queued()
+Do Nbi
+   Parse Pull Item
+End
 
 /***
    Vider la file d'attente des SYS_ETAT et valoriser l'état des process
