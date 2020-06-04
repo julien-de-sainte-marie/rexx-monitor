@@ -5,7 +5,7 @@ End
 
 Select
    When msgCmd = Sysvars.SysLInit then do
-      Call SysOut "Reçu : INIT"
+      Call SysOut "ReÃ§u : INIT"
       Rc = Lock( "TOTO", "X" )
    End
    When msgCmd = Sysvars.SysLIdle then do
@@ -16,7 +16,7 @@ Select
       End
    End
    When msgCmd = Sysvars.SysLEnd then do
-      Call SysOut "Reçu : END"
+      Call SysOut "ReÃ§u : END"
    End
    OtherWise
       nop

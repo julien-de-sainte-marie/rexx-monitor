@@ -1,6 +1,6 @@
-/* Point d'entrée
+/* Point d'entrÃ©e
 
-   Données = msgCmd
+   DonnÃ©es = msgCmd
 
 */
 Main:
@@ -13,7 +13,7 @@ If FirstInstance = 0 then do
    Nop
 End
 
-/* Le processus n'a pas été initialisé */
+/* Le processus n'a pas Ã©tÃ© initialisÃ© */
 if ProcessInitialized = 0 then do
    /* Initialisation des variables */
    .
@@ -22,19 +22,19 @@ if ProcessInitialized = 0 then do
 End
 
 Select
-   /* Fin du process demandée */
+   /* Fin du process demandÃ©e */
    When msgCmd = SysVars.SysLEnd then do
       .
       .
       .
    End
-   /* Initialisation du process demandée */
+   /* Initialisation du process demandÃ©e */
    When msgCmd = SysVars.SysLInit then do
       .
       .
       .
    End
-   /* Rien à faire ... */
+   /* Rien Ã  faire ... */
    When msgCmd = SysVars.SysLIdle then do
       .
       .
@@ -49,11 +49,11 @@ Return
 
 
 /***************************************************************************************
-   Prise en charge de certains messages système
+   Prise en charge de certains messages systÃ¨me
    --------------------------------------------
 
    msgId    Identifiant du message
-   msgCmd   Commande associée au message
+   msgCmd   Commande associÃ©e au message
 
 ****************************************************************************************/
 ProUserHook:

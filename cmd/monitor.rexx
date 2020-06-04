@@ -13,23 +13,14 @@ ProcessName = Strip( ProcessName )
 if ProcessName = "" then do
    Parse Source A1 A2 FullProcessName Reste
 
-   ProcessName = FileSpec( "name", FullProcessName )
-   Parse var ProcessName ProcessName"."Reste
+   psProcessName = FileSpec( "name", FullProcessName )
+   Parse var psProcessName ProcessName"."Reste
 End
 
 ProcessName = Translate(Strip( ProcessName ))
 
-/*
-if Length( ProcessName ) > 8 then do
-   Say "Nom du process trop grand (8 car. maximum) !"
-   Return
-End
-*/
-
-address SYSTEM 'echo $PPID |rxqueue'
-Pull SysVars.PID
-
 share                   = "ENVIRONMENT"
+SysVars.PID             = getpid()
 SysVars.SysVersion.0    = 3
 SysVars.SysVersion.1    = "MOM$ version 2.1"
 SysVars.SysVersion.2    = ""
@@ -59,6 +50,8 @@ SysVars.SysElapsedAll   = 0
 SysVars.SysRacine       = ""
 SysVars.fileWSOCK       = "/etc/xchglistener.ini"
 SysVars.SysWriteSysout  = GetProfileString( , "SYSOUT", "TRACE", "NO" )
+SysVars.SysSleepDelay   = GetProfileString( , "SYSTEM", "SLEEP_DELAY", "1" )
+SysVars.SysSleepexDelay = GetProfileString( , "SYSTEM", "SLEEPEX_DELAY", "0.2" )
 SysVars.SysLoopDelay    = GetProfileString( , "SYSTEM", "LOOP_DELAY", "1" )
 SysVars.SysLoopBreak    = GetProfileString( , "SYSTEM", "LOOP_BREAK", "1" )
 SysVars.SysTSleep       = GetProfileString( , "SYSTEM", "LOOP_SLEEP", "0.5" )
@@ -69,6 +62,7 @@ SysVars.SysDetectMon    = Translate(GetProfileString( , "SYSTEM", "DETECT_RUN_LO
 SysVars.SysStopRedoT    = GetProfileString( , "SYSTEM", "LOOP_BEFORE_FORCE", "100" )
 SysVars.SysSendMessageQueue = ""
 SysVars.SysProcessLockName  = SysVars.SysLockPath""SysVars.SysMonName".LOK"
+SysVars.FirstInstance   = 0
 SysVars.TID             = "0"
 SysVars.PPRIO           = "0"
 SysVars.TPRIO           = "0"
@@ -86,7 +80,6 @@ LocalQueue.0            = 0
 LocalProcess.0          = 0
 TimeToWait              = 1
 NumberProcess           = 0
-FirstInstance           = 0
 ProcessInitialized      = 0
 ProcessLockName         = SysVars.SysLockPath""ProcessName".LOK"
 EndForce                = 0
@@ -104,13 +97,14 @@ Else
 rep            = VALUE("PIP_REP",,share)
 drive          = VALUE("PIP_DRV",,share)
 
-if strip(rep)   = "" then rep   = "/home/monitor"
+if strip(rep)   = "" then rep   = DIRECTORY()
 if strip(drive) = "" then drive = ""
 
 curdir         = DIRECTORY()
 PipDir         = drive""rep
 newdir         = DIRECTORY(PipDir)
 
+tempFirstInstance = 1
 if IAmMonitor = 0 then do
    if SysVars.SysDetectMon = "YES" Then /* JSM 13.03.2003 Here */
       if Stream( SysVars.SysProcessLockName, 'c', 'query exists' ) = "" then do
@@ -119,13 +113,24 @@ if IAmMonitor = 0 then do
       End
 End
 Else do
+    SysVars.FirstInstance = 1
+    nbps = 0
+    Address SYSTEM 'ps -eaf | grep "'psProcessName'" | grep -v grep | grep -v 'SysVars.PID'> /tmp/monitor.ps.list'
+    Do While Lines('/tmp/monitor.ps.list') > 0
+        a=LineIn('/tmp/monitor.ps.list')
+         if pos(psProcessName,a) > 0 then do
+                nbps = nbps + 1
+         end
+    end
+    If nbps > 0 Then
+        tempFirstInstance = 0
    Address SYSTEM 'rm lock/* 1>/dev/null 2>&1' /* */
 End
 
 if Stream( ProcessLockName, 'c', 'query exists' ) = "" then do
-   FirstInstance  = 1
-   Rc             = Stream( ProcessLockName, 'c', 'open write' )
-   Rc             = Stream( ProcessLockName, 'c', 'close' )
+   SysVars.FirstInstance  = tempFirstInstance
+   Rc                     = Stream( ProcessLockName, 'c', 'open write' )
+   Rc                     = Stream( ProcessLockName, 'c', 'close' )
 End
 
 if IAmMonitor = 1 then Call MonitorPrologue
@@ -165,7 +170,7 @@ do I = 1 to LocalQueue.0
       Call RxQueue 'Delete', LocalQueue.I"@127.0.0.1"
 End
 
-if FirstInstance  = 1 then
+if SysVars.FirstInstance  = 1 then
    Address SYSTEM 'rm 'ProcessLockName' 1>/dev/null 2>&1'
 
 Call ThrowLog "DOWN"
@@ -233,7 +238,6 @@ Do I = 1 to Help.0
 End
 Return
 /* =================================================================================== */
-
 /*************************************************************************************
                            API des outils de MONITOR
                            =========================
@@ -443,14 +447,14 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-
+   
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then
+      If Translate(msgData) \= SysVars.SysLEnd Then 
          Call QueueData MSG
       Else
          Call PushData MSG
-
+      
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -470,6 +474,50 @@ Call SysOut "PostMessage returns: "Ok
 return Ok
 /* =================================================================================== */
 
+/* -----------------------------------------------------------------------------------
+   PostMessageTop
+-------------------------------------------------------------------------------------- */
+PostMessageTop: PROCEDURE EXPOSE SysVars. LockedProcess CtrlAttn
+Trace Off
+Parse Arg msgTo, msgId, msgData
+
+Signal On Syntax Name PostMessageError
+Call SysOut "PostMessage: "msgTo","msgId","msgData
+
+if msgTo = '' then msgTo = SysVars.SysMonName
+
+MSG = FormatMessage( SysVars.SysWhoAmI, msgTo, msgId, msgData )
+if MSG = 0 then
+   Ok = 0
+Else do
+
+   If msgId \= "SYS_ETAT" Then
+      Avant = SetQueue( SysVars.SysQueue )
+   Else
+      Avant = SetQueue( SysVars.SysEtatQueue )
+   
+   if Avant \= "" then do
+
+      Call PushData MSG
+      
+      Apres = SetQueue( Avant )
+      Ok    = 1
+
+   End
+   Else Ok = 0
+
+End
+Signal PostMessageRetour
+
+PostMessageError:
+Apres = SetQueue( Avant )
+Ok    = 0
+
+PostMessageRetour:
+Signal On Syntax Name StandardSyntax
+Call SysOut "PostMessage returns: "Ok
+return Ok
+/* =================================================================================== */
 
 
 /* -----------------------------------------------------------------------------------
@@ -1288,7 +1336,7 @@ If Periode > 0 Then Do
    Call ProcStartTimer Periode
    Do Forever
       If Queued() > 0 Then Leave
-      Call Sleep 0.2
+      Call Sleep SysVars.SysSleepexDelay
    End
    If Queued() > 0 Then Do
       Parse Pull slexQ
@@ -1316,12 +1364,12 @@ Arg dwT
 ssDelay=dwT
 if ssDelay <= 0 then ssDelay = 1
 Do Forever
-   Call Sleep 1
+   Call Sleep SysVars.SysSleepDelay
    If Queued() > 0 Then Do
       Leave
    End
-   ssDelay = ssDelay - 1
-   If ssDelay = 0 Then Leave
+   ssDelay = ssDelay - SysVars.SysSleepDelay
+   If ssDelay <= 0 Then Leave
 End
 Return ssDelay
 /* =================================================================================== */
@@ -1377,8 +1425,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-
-   If wsockIPP \= "" Then
+      
+   If wsockIPP \= "" Then 
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1486,9 +1534,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-
+            
             Call Main msgCmd
-
+            
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1536,16 +1584,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-
+            
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-
+         
          Call Main msgCmd
-
+         
          Trace Off
-
+         
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1826,7 +1874,7 @@ Do ForEver
 
    if CtrlAttn = 1 | SysStopAsked = 1 then do
       Call ThrowLogM ProcessName, "SHUTTING DOWN"
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arr�t du process demand� ..."
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du process demandé ..."
       Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Il y a actuellement "NumberProcess" process actifs"
       Call StopAllProcess
       SysVars.SysStopping  = 1
@@ -1851,7 +1899,7 @@ Do ForEver
    End
 
    if SysStopAsked = 2 then  Do
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arr�t du moniteur forc� !"
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du moniteur forcé !"
       Leave
    End
 
@@ -1894,7 +1942,7 @@ Do mI = 1 to LocalProcess.0
    if mQ \= "" then do
       Rc = CancelLoopForProcess( mQ )
       Rc = LinkMessage( mQ, "SYS_STOP", SysVars.SysLEnd )
-      Call Printf SysVars.SysMonName, MsgLLevelDisplaySyst, "Arr�t demand� pour "mQ
+      Call Printf SysVars.SysMonName, MsgLLevelDisplaySyst, "Arrêt demandé pour "mQ
 
    End
 
@@ -2259,12 +2307,10 @@ Return
 -------------------------------------------------------------------------------------- */
 MonitorStartQueueSys:
 msqsRC = Value("Rxstack_run",,Share)
-If msqsRC \= "NO" Then Do
-   Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "D�marrage du service de gestion des files d'attente ..."
-/***
+If msqsRC \= "NO" & SysVars.FirstInstance = 1 Then Do
+   Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Démarrage du service de gestion des files d'attente ..."
    Address SYSTEM 'rxstack -d'
    Address SYSTEM 'sleep 1'
-***/
 End
 Else
    Rc = 0
@@ -2277,13 +2323,10 @@ Return Rc
 -------------------------------------------------------------------------------------- */
 MonitorStopQueueSys:
 msqsRC = Value("Rxstack_run",,Share)
-If msqsRC \= "NO" Then Do
+If msqsRC \= "NO" & SysVars.FirstInstance = 1 Then Do
    If TheFirstQueue = SysVars.SysQueue Then Do
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arr�t du service de gestion des files d'attente ..."
-/***
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du service de gestion des files d'attente ..."
       Address SYSTEM 'rxstack -k'
-***/
-/*
       Address SYSTEM 'ps > /tmp/monitor.ps.list'
       Do While Lines('/tmp/monitor.ps.list') > 0
          a=LineIn('/tmp/monitor.ps.list')
@@ -2293,7 +2336,6 @@ If msqsRC \= "NO" Then Do
             leave
          end
       end
-*/
    End
    Else
       Rc = 2
@@ -2312,7 +2354,7 @@ Else
    TheFirstQueue = ""
 /***********************************************
 if TheFirstQueue \= SysVars.SysQueue then do
-   Say "Monitor d�j� actif !"
+   Say "Monitor déjà actif !"
    do I = 1 to LocalQueue.0
       if LocalQueue.I \= "" then
          Call RxQueue 'Delete', LocalQueue.I
@@ -2321,7 +2363,7 @@ if TheFirstQueue \= SysVars.SysQueue then do
 End
 ********/
 
-/* Libell�s */
+/* Libells */
 MsgLLevelDisplaySyst  = "LEVEL_SYSTEM"
 MsgLLevelDisplayRecv  = "LEVEL_RECEIVE"
 MsgLLevelDisplaySend  = "LEVEL_SEND"
@@ -2337,22 +2379,24 @@ MsgLevelDisplayDebug = GetProfileString( , "DISPLAY", MsgLLevelDisplayDebug, "NO
 LogFileName          = GetProfileString( , "LOG", "FileName", "" )
 LogFileNameDbg       = GetProfileString( , "LOG", "FileNameDebug", "" )
 
-if AllocQueue( CpuQueue ) = "" then do
-   Say "Impossible de creer "CpuQueue" !"
-   do I = 1 to LocalQueue.0
-      if LocalQueue.I \= "" then
-         Call RxQueue 'Delete', LocalQueue.I
-   End
-   Exit
-End
+if SysVars.FirstInstance then do
+    if AllocQueue( CpuQueue ) = "" then do
+       Say "Impossible de creer "CpuQueue" !"
+       do I = 1 to LocalQueue.0
+          if LocalQueue.I \= "" then
+             Call RxQueue 'Delete', LocalQueue.I
+       End
+       Exit
+    End
 
-if AllocQueue( SysVars.SysEtatQueue ) = "" then do
-   Say "Impossible de creer "SysVars.SysEtatQueue" !"
-   do I = 1 to LocalQueue.0
-      if LocalQueue.I \= "" then
-         Call RxQueue 'Delete', LocalQueue.I
-   End
-   Exit
+    if AllocQueue( SysVars.SysEtatQueue ) = "" then do
+       Say "Impossible de creer "SysVars.SysEtatQueue" !"
+       do I = 1 to LocalQueue.0
+          if LocalQueue.I \= "" then
+             Call RxQueue 'Delete', LocalQueue.I
+       End
+       Exit
+    End
 End
 
 Return
@@ -2506,7 +2550,7 @@ if Avant \= "" then do
       Call PushData QmsgData
    Else
       Call QueueData QmsgData
-
+      
    QlmOk = 1
    Tm    = SetQueue( Avant )
 
@@ -2904,7 +2948,7 @@ if lpR = 0 then do
 End
 Else do
 
-   lpX = FindLockX( lkRsrc, lkWho )        /* Un verrou type 'X' pos� ? */
+   lpX = FindLockX( lkRsrc, lkWho )        /* Un verrou type 'X' posé ? */
    if lpX = 1 then Return 0
 
    lpO = FindLockOwner( lkWho )

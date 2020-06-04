@@ -1096,7 +1096,7 @@ If Periode > 0 Then Do
    Call ProcStartTimer Periode
    Do Forever
       If Queued() > 0 Then Leave
-      Call Sleep 0.2
+      Call Sleep SysVars.SysSleepexDelay
    End
    If Queued() > 0 Then Do
       Parse Pull slexQ
@@ -1124,12 +1124,12 @@ Arg dwT
 ssDelay=dwT
 if ssDelay <= 0 then ssDelay = 1
 Do Forever
-   Call Sleep 1
+   Call Sleep SysVars.SysSleepDelay
    If Queued() > 0 Then Do
       Leave
    End
-   ssDelay = ssDelay - 1
-   If ssDelay = 0 Then Leave
+   ssDelay = ssDelay - SysVars.SysSleepDelay
+   If ssDelay <= 0 Then Leave
 End
 Return ssDelay
 /* =================================================================================== */

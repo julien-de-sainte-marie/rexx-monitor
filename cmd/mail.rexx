@@ -13,18 +13,11 @@ ProcessName = Strip( ProcessName )
 if ProcessName = "" then do
    Parse Source A1 A2 FullProcessName Reste
 
-   ProcessName = FileSpec( "name", FullProcessName )
-   Parse var ProcessName ProcessName"."Reste
+   psProcessName = FileSpec( "name", FullProcessName )
+   Parse var psProcessName ProcessName"."Reste
 End
 
 ProcessName = Translate(Strip( ProcessName ))
-
-/*
-if Length( ProcessName ) > 8 then do
-   Say "Nom du process trop grand (8 car. maximum) !"
-   Return
-End
-*/
 
 address SYSTEM 'echo $PPID |rxqueue'
 Pull SysVars.PID
@@ -59,6 +52,8 @@ SysVars.SysElapsedAll   = 0
 SysVars.SysRacine       = ""
 SysVars.fileWSOCK       = "/etc/xchglistener.ini"
 SysVars.SysWriteSysout  = GetProfileString( , "SYSOUT", "TRACE", "NO" )
+SysVars.SysSleepDelay   = GetProfileString( , "SYSTEM", "SLEEP_DELAY", "1" )
+SysVars.SysSleepexDelay = GetProfileString( , "SYSTEM", "SLEEPEX_DELAY", "0.2" )
 SysVars.SysLoopDelay    = GetProfileString( , "SYSTEM", "LOOP_DELAY", "1" )
 SysVars.SysLoopBreak    = GetProfileString( , "SYSTEM", "LOOP_BREAK", "1" )
 SysVars.SysTSleep       = GetProfileString( , "SYSTEM", "LOOP_SLEEP", "0.5" )
@@ -69,6 +64,7 @@ SysVars.SysDetectMon    = Translate(GetProfileString( , "SYSTEM", "DETECT_RUN_LO
 SysVars.SysStopRedoT    = GetProfileString( , "SYSTEM", "LOOP_BEFORE_FORCE", "100" )
 SysVars.SysSendMessageQueue = ""
 SysVars.SysProcessLockName  = SysVars.SysLockPath""SysVars.SysMonName".LOK"
+SysVars.FirstInstance   = 0
 SysVars.TID             = "0"
 SysVars.PPRIO           = "0"
 SysVars.TPRIO           = "0"
@@ -86,7 +82,6 @@ LocalQueue.0            = 0
 LocalProcess.0          = 0
 TimeToWait              = 1
 NumberProcess           = 0
-FirstInstance           = 0
 ProcessInitialized      = 0
 ProcessLockName         = SysVars.SysLockPath""ProcessName".LOK"
 EndForce                = 0
@@ -104,13 +99,14 @@ Else
 rep            = VALUE("PIP_REP",,share)
 drive          = VALUE("PIP_DRV",,share)
 
-if strip(rep)   = "" then rep   = "/home/monitor"
+if strip(rep)   = "" then rep   = DIRECTORY()
 if strip(drive) = "" then drive = ""
 
 curdir         = DIRECTORY()
 PipDir         = drive""rep
 newdir         = DIRECTORY(PipDir)
 
+tempFirstInstance = 1
 if IAmMonitor = 0 then do
    if SysVars.SysDetectMon = "YES" Then /* JSM 13.03.2003 Here */
       if Stream( SysVars.SysProcessLockName, 'c', 'query exists' ) = "" then do
@@ -119,13 +115,22 @@ if IAmMonitor = 0 then do
       End
 End
 Else do
-   Address SYSTEM 'rm lock/* 1>/dev/null 2>&1'
+    SysVars.FirstInstance = 1
+    Address SYSTEM 'ps -eaf | grep 'psProcessName' | grep -v grep > /tmp/monitor.ps.list'
+    Do While Lines('/tmp/monitor.ps.list') > 0
+        a=LineIn('/tmp/monitor.ps.list')
+         if pos(psProcessName,a) > 0 then do
+                tempFirstInstance = 0
+                leave
+         end
+    end
+   Address SYSTEM 'rm lock/* 1>/dev/null 2>&1' /* */
 End
 
 if Stream( ProcessLockName, 'c', 'query exists' ) = "" then do
-   FirstInstance  = 1
-   Rc             = Stream( ProcessLockName, 'c', 'open write' )
-   Rc             = Stream( ProcessLockName, 'c', 'close' )
+   SysVars.FirstInstance  = tempFirstInstance
+   Rc                     = Stream( ProcessLockName, 'c', 'open write' )
+   Rc                     = Stream( ProcessLockName, 'c', 'close' )
 End
 
 if IAmMonitor = 1 then Call MonitorPrologue
@@ -162,10 +167,10 @@ Call ThrowLog "FREEING"
 tm = FreeProcess()
 do I = 1 to LocalQueue.0
    if LocalQueue.I \= "" then
-      Call RxQueue 'Delete', LocalQueue.I
+      Call RxQueue 'Delete', LocalQueue.I"@127.0.0.1"
 End
 
-if FirstInstance  = 1 then
+if SysVars.FirstInstance  = 1 then
    Address SYSTEM 'rm 'ProcessLockName' 1>/dev/null 2>&1'
 
 Call ThrowLog "DOWN"
@@ -233,7 +238,6 @@ Do I = 1 to Help.0
 End
 Return
 /* =================================================================================== */
-
 /*************************************************************************************
                            API des outils de MONITOR
                            =========================
@@ -243,13 +247,11 @@ Return
    AllocQueue
 -------------------------------------------------------------------------------------- */
 AllocQueue:
-Trace Off
+Trace off
 Arg pArg1
 Call SysOut "AllocQueue: "pArg1
 
 oldQ = rxQueue('get')
-Parse Var oldQ oldQ"@"ResteX
-
 
 if pArg1 = '' then do
 
@@ -263,10 +265,12 @@ if pArg1 = '' then do
 End
 Else do
 
-   aqNom = RxQueue( 'create', pArg1 )
-   Parse Var aqNom aqNom"@"ResteX
-   if aqNom = pArg1 then do
+   aqNom = RxQueue( 'create', pArg1"@127.0.0.1" )
+   Parse Var aqNom naqNom"@"ResteX
 
+   if naqNom = pArg1 then do
+
+      aqNom          = naqNom
       I              = LocalQueue.0
       I              = I + 1
       LocalQueue.I   = aqNom
@@ -301,7 +305,7 @@ fqOk = 9
 do I = 1 to LocalQueue.0
    if LocalQueue.I = fqArg1 then do
       LocalQueue.I = ""
-      fqOk         = RxQueue( "delete", fqArg1 )
+      fqOk         = RxQueue( "delete", fqArg1"@127.0.0.1" )
       Leave
    End
 End
@@ -341,14 +345,16 @@ return R
    SetQueue
 -------------------------------------------------------------------------------------- */
 SetQueue: PROCEDURE EXPOSE LockedProcess CtrlAttn SysVars.
-Trace Off
+Trace off
 Arg Arg1
 Signal On Syntax Name SetQueueSyntax
 Call SysOut "SetQueue: "Arg1
 
 if Arg1 = "" then Signal SetQueueSyntax
 
-Nom = RxQueue( "set", arg1 )
+Nom = RxQueue( "set", arg1"@127.0.0.1"  )
+Parse Var Nom Nom"@"ResteX
+
 Signal SetQueueRetour
 
 SetQueueSyntax:
@@ -358,6 +364,19 @@ SetQueueRetour:
 Signal On Syntax Name StandardSyntax
 Call SysOut "SetQueue returns: "Nom
 return Nom
+/* =================================================================================== */
+
+
+/* -----------------------------------------------------------------------------------
+   Get Queue name
+-------------------------------------------------------------------------------------- */
+GetQueueName:
+Trace Off
+
+qName = rxQueue('get')
+Parse Var qName qName"@"ResteX
+
+return qName
 /* =================================================================================== */
 
 
@@ -428,14 +447,59 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-
+   
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then
+      If Translate(msgData) \= SysVars.SysLEnd Then 
          Call QueueData MSG
       Else
          Call PushData MSG
+      
+      Apres = SetQueue( Avant )
+      Ok    = 1
 
+   End
+   Else Ok = 0
+
+End
+Signal PostMessageRetour
+
+PostMessageError:
+Apres = SetQueue( Avant )
+Ok    = 0
+
+PostMessageRetour:
+Signal On Syntax Name StandardSyntax
+Call SysOut "PostMessage returns: "Ok
+return Ok
+/* =================================================================================== */
+
+/* -----------------------------------------------------------------------------------
+   PostMessageTop
+-------------------------------------------------------------------------------------- */
+PostMessageTop: PROCEDURE EXPOSE SysVars. LockedProcess CtrlAttn
+Trace Off
+Parse Arg msgTo, msgId, msgData
+
+Signal On Syntax Name PostMessageError
+Call SysOut "PostMessage: "msgTo","msgId","msgData
+
+if msgTo = '' then msgTo = SysVars.SysMonName
+
+MSG = FormatMessage( SysVars.SysWhoAmI, msgTo, msgId, msgData )
+if MSG = 0 then
+   Ok = 0
+Else do
+
+   If msgId \= "SYS_ETAT" Then
+      Avant = SetQueue( SysVars.SysQueue )
+   Else
+      Avant = SetQueue( SysVars.SysEtatQueue )
+   
+   if Avant \= "" then do
+
+      Call PushData MSG
+      
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -456,7 +520,6 @@ return Ok
 /* =================================================================================== */
 
 
-
 /* -----------------------------------------------------------------------------------
    PushData
 -------------------------------------------------------------------------------------- */
@@ -464,7 +527,7 @@ PushData:
 Trace Off
 Parse Arg aData
 
-Call SysOut "PushData("RxQueue('get')"): "aData
+Call SysOut "PushData("GetQueueName()"): "aData
 
 Push aData
 
@@ -476,10 +539,10 @@ return
    PullData
 -------------------------------------------------------------------------------------- */
 PullData:
-Trace Off
+Trace off
 Parse Arg bWait
 
-Call SysOut "PullData("RxQueue('get')"): "bWait
+Call SysOut "PullData("GetQueueName()"): "bWait
 
 if bWait = "" | DataType( bWait ) = CHAR then bWait = 0
 pdWait = bWait
@@ -506,7 +569,7 @@ QueueData:
 Trace Off
 Parse Arg aData
 
-Call SysOut "QueueData("RxQueue('get')"): "aData
+Call SysOut "QueueData("GetQueueName()"): "aData
 
 QUEUE aData
 
@@ -581,7 +644,6 @@ return Ok
 /* =================================================================================== */
 
 
-
 /* -----------------------------------------------------------------------------------
    WaitMessage
 -------------------------------------------------------------------------------------- */
@@ -605,7 +667,7 @@ if CreatedProcess = 1 | isCreating = 1 then do
    if pTimeOut = "" | DataType( pTimeOut ) \= "NUM" | pTimeOut < 0 then pTimeOut = 0
 
    if pQueue \= '' then do
-      if pQueue \= RxQueue( 'get' ) then do
+      if pQueue \= GetQueueName() then do
 
          WMqueue = SetQueue( pQueue )
          if WMqueue = '' then Ok = 0
@@ -617,7 +679,7 @@ if CreatedProcess = 1 | isCreating = 1 then do
    if Ok = 1 & IAmMonitor = 0 then do
 
       if NoPost = 0 then
-         Ok = PostMessage( , "SYS_BEGINLOOP", RxQueue( 'get' ))
+         Ok = PostMessage( , "SYS_BEGINLOOP", GetQueueName())
 
       MSG = WaitMessageLoop(pTimeOut)
 
@@ -1242,7 +1304,7 @@ return DdeRc
 
 /* -----------------------------------------------------------------------------------
    monSleep
-      Periode: Dur�e d'attente exprim�e en seconde
+      Periode: Dur\E9e d'attente exprim\E9e en seconde
 -------------------------------------------------------------------------------------- */
 monSleep:
 Trace Off
@@ -1262,7 +1324,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SleepEx
-      Periode: Dur�e d'attente exprim�e en seconde
+      Periode: Dur\E9e d'attente exprim\E9e en seconde
 -------------------------------------------------------------------------------------- */
 SleepEx:
 Trace Off
@@ -1274,7 +1336,7 @@ If Periode > 0 Then Do
    Call ProcStartTimer Periode
    Do Forever
       If Queued() > 0 Then Leave
-      Call Sleep 0.2
+      Call Sleep SysVars.SysSleepexDelay
    End
    If Queued() > 0 Then Do
       Parse Pull slexQ
@@ -1292,8 +1354,8 @@ Return slexRC
 
 /* -----------------------------------------------------------------------------------
    SysSleep
-      Periode: Dur�e d'attente exprim�e en seconde
-      La fonction se r�veille si une donn�e est dans la file d'attente
+      Periode: Dur\E9e d'attente exprim\E9e en seconde
+      La fonction se r\E9veille si une donn\E9e est dans la file d'attente
 -------------------------------------------------------------------------------------- */
 SysSleep:
 Trace Off
@@ -1302,19 +1364,19 @@ Arg dwT
 ssDelay=dwT
 if ssDelay <= 0 then ssDelay = 1
 Do Forever
-   Call Sleep 1
+   Call Sleep SysVars.SysSleepDelay
    If Queued() > 0 Then Do
       Leave
    End
-   ssDelay = ssDelay - 1
-   If ssDelay = 0 Then Leave
+   ssDelay = ssDelay - SysVars.SysSleepDelay
+   If ssDelay <= 0 Then Leave
 End
 Return ssDelay
 /* =================================================================================== */
 
 /* -----------------------------------------------------------------------------------
    SysCls
-      Efacer l'�cran
+      Efacer l'\E9cran
 -------------------------------------------------------------------------------------- */
 SysCls:
 Trace Off
@@ -1325,7 +1387,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SysFileTree
-      Lister les fichiers d'un r�pertoire
+      Lister les fichiers d'un r\E9pertoire
 -------------------------------------------------------------------------------------- */
 SysFileTree:
 Trace Off
@@ -1351,7 +1413,7 @@ Return 0
 
 /* -----------------------------------------------------------------------------------
    getWSOCKIP
-       R�cup�rer l'adresse IP de la tour de controle
+       R\E9cup\E9rer l'adresse IP de la tour de controle
 -------------------------------------------------------------------------------------- */
 getWSOCKIP:
 Trace Off
@@ -1363,8 +1425,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-
-   If wsockIPP \= "" Then
+      
+   If wsockIPP \= "" Then 
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1437,7 +1499,7 @@ do FOREVER
       xSysGetCmd = PullData()
       xSysGetCmd = Strip( xSysGetCmd )
 
-      Call Sysout "SysMainLoop pulled "rxqueue('get')": "xSysGetCmd
+      Call Sysout "SysMainLoop pulled "GetQueueName()": "xSysGetCmd
 
       if Left( xSysGetCmd, 1 ) = '~' then do
          GetCmd = Right( xSysGetCmd, Length( xSysGetCmd ) - 1 )
@@ -1472,9 +1534,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-
+            
             Call Main msgCmd
-
+            
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1522,16 +1584,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-
+            
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-
+         
          Call Main msgCmd
-
+         
          Trace Off
-
+         
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1719,6 +1781,478 @@ if iscOk = 1 then Call ProcUserHook
 
 Return iscOk
 /* =================================================================================== */
+/* Procdure principale */
+Main:
+Ligne = msgCmd
+
+If FirstInstance = 0 then do
+   Call Display "Pas plus d'une instance ne peut être activée !"
+   EndForce = 2
+   Return
+End
+
+Cmd = strip(Ligne)
+
+/* Tester la fin de traitement */
+if Cmd = SysVars.SysLEnd then do
+   if FirstInstance = 1 & ProcessInitialized = 0 then
+      Status = LineOut(LocalBal)
+   return
+End
+
+/* Initialisation */
+If ProcessInitialized = 0 then
+   ReInit = 1
+
+If ReInit = 1 then do
+   HelpLine       = "SEND [MSG|FILE|CMD] TO user data"
+   FicMailTmp     = "/tmp/"ProcessName".tmp"
+   BalName        = ""
+   PrivateBal     = ""
+   BalLock        = ""
+   BalLocked      = 1
+   BalPath        = ""
+   BalTmstp       = ""
+   User           = ""
+   UserPwd        = ""
+   NetName        = ""
+   NetPath        = ""
+   TryLater       = 0
+   SendMsg.0      = 0
+   AddOk          = 0
+   NbrMsgToPost   = 0
+   InitBalDone    = 0
+   CompteurIx     = 1
+   CompteurIxMax  = 5
+   Anonymous      = 0
+   LocalBal       = "mail/mailbox.bal"
+   ReInit         = 0
+   NoFicOut       = 1
+   MailIniFile    = "ini/mail.ini"
+   DefaultSection = "Defaut"
+   KeyBal         = "BoiteAuxLettres"
+   KeyPassword    = "MotDePasse"
+   KeyAnonimous   = "Anonyme"
+
+   Call Display 'INIT MAIL IN PROGRESS'
+
+   If Stream(LocalBal,"c","Query exists") = '' then do
+      If Stream(LocalBal,"c","open write") \= "READY:" then do
+         'md mail > nul 2>&1'
+         If Stream(LocalBal,"c","open write") \= "READY:" then do
+            Call Display "MAIL CANNOT CREATE "LocalBal
+            EndForce = 2
+            Return
+         End
+      End
+      rc = Stream(LocalBal,"c","close")
+   End
+
+   User    = Translate(Strip(VALUE("USERNAME",,share)))
+   NetName = Translate(Strip(VALUE("USERDOMAIN",,share)))
+   Say "User="User", NetName="NetName
+
+   if User = "" then do
+      Call Display "Identification impossible (SET USERNAME)"
+      EndForce = 2
+   End
+   If EndForce = 0 then do
+
+      Rc = GetProfileString( MailIniFile, DefaultSection, KeyBal, "" )
+      if Rc \= "" then
+         Tm = PostMessage( ProcessName, "", "SET BALNAME="Rc )
+
+      Rc = Strip( GetProfileString( MailIniFile, DefaultSection, KeyPassword, "" ))
+      if Rc \= "" then
+         Tm = PostMessage( ProcessName, "", "SET PASSWORD="Rc )
+
+      Rc = GetProfileString( MailIniFile, DefaultSection, KeyAnonimous, "0" )
+      if Rc = "1" then
+         Tm = PostMessage( ProcessName, "", "SET ANONYMOUS" )
+
+      Call Display 'INIT MAIL ENDED'
+      Ti = TimeToWait * CompteurIxMax
+      Call Display "AUTOMATIC READ TIME ABOUT "Ti
+   End
+   Else do
+      Call Display 'INIT MAIL FAILED - STOP PROCESS'
+   End
+End
+Else Do
+
+   CompteurIx = CompteurIx + 1
+   If CompteurIx > CompteurIxMax then do
+      CompteurIx = 1
+      BalTmstp   = ""
+   End
+
+   Select
+      When Cmd = "WAKE" then do
+         Call Display "MAIL IS ALIVE"
+         if InitBalDone = 0 then Call Display "MAIL WAITS FOR 'SET BALNAME' COMMAND"
+      End
+      When Translate( Substr( Cmd, 1, 4 )) = "SET " then do
+         Parse var Cmd t" "Objet"="Reste
+         Objet = translate(strip(Objet))
+         Reste = translate(strip(Reste))
+         Select
+            When Objet = "BALNAME" then do
+               BalName  = Reste
+               BalPath  = FileSpec('drive',BalName)""FileSpec('path',BalName)
+               BalLock  = BalPath"LOCK"
+
+               if Stream(BalLock,'c','query exists') = "" then do
+                  x = Lineout(BalLock,'LOCK')
+                  x = Lineout(BalLock)
+               End
+
+               if Stream(BalName,'c','query exists') = "" then do
+                  x        = Stream(BalName,'c','open write')
+                  x        = Stream(BalName,'c','close')
+                  BalTmstp = Stream(BalName,'c','query datetime')
+               End
+
+               InitBalDone = 1
+               Call Display "MAIL PATH IS "BalName
+
+               if BalCheckLock() = 0 then
+                  Call Display 'LOCKING BAL IS CORRECT - UNLOCKING'
+               Else
+                  Call Display 'NOT ABLE TO LOCK BAL'
+
+            End
+            When Objet = "USER" | Objet = "USERNAME" then do
+               Reste = strip(Reste)
+               If Reste \= "" then do
+                  User = Reste
+                  Say "User="User", NetName="NetName
+               End
+            End
+            When Objet = "PASSWORD" then do
+               Reste = strip(Reste)
+               If Reste \= "" then do
+                  If Stream(Reste,'c','open read') = 'READY:' then do
+                     UserPwd = Strip(LineIn(Reste))
+                     Status  = Stream(Reste,'c','close')
+                     if UserPwd\= "" then Call Display "PASSWORD ACTIVE"
+                  End
+               End
+            End
+            When Objet = "ANONYMOUS" then do
+               Anonymous = 1
+            End
+            Otherwise
+               Call Display "UNSUPPORTED SET "Objet" COMMAND"
+         End
+      End
+      When Substr(Cmd,1,5) = "SEND " then do
+         Parse var Cmd t" "What" TO "sUsr" "Reste
+         sUsr  = translate(strip(sUsr))
+         What  = translate(strip(What))
+         Reste = strip(Reste)
+         if sUsr = "" then
+            Call Display "INVALID SEND SYNTAX - USER IS MISSING - "HelpLine
+         else
+         if What = "" then
+            Call Display "INVALID SEND SYNTAX - MSG|FILE IS MISSING - "HelpLine
+         else
+         if Reste = "" then
+            Call Display "INVALID SEND SYNTAX - data IS MISSING - "HelpLine
+         else do
+            Select
+               When What = "MSG" | What = "FILE" | What = "CMD" | What = "ACK" then do
+                  I         = SendMsg.0 + 1
+                  SendMsg.0 = I
+                  SendMsg.I = What"!"sUsr"!"Reste
+                  Call Display "SEND "What"("I") TO "sUsr" IN BUFFER"
+                  NbrMsgToPost = NbrMsgToPost + 1
+               End
+               Otherwise
+                  Call Display "INVALIDE SEND SYNTAX - "What" - "HelpLine
+            End
+         End
+      End
+      When Cmd = SysVars.SysLIdle | Cmd = "" then do
+         if NbrMsgToPost > 0 then do
+            If BalOpen() = 0 then do
+               Do I = 1 to SendMsg.0
+                  If SendMsg.I \= "" then do
+                     Parse var SendMsg.I What"!"sUsr"!"sData
+                     Select
+                        When What = "MSG" then
+                           Call BalAddMsg sUsr sData
+                        When What = "FILE" then
+                           Call BalAddFile sUsr sData
+                        When What = "CMD" then
+                           Call BalAddCmd sUsr sData
+                        When What = "ACK" then
+                           Call BalAddAck sUsr sData
+                        Otherwise
+                           AddOk = 2
+                     End
+
+                     If AddOk = 1 then do
+                        Call Display What"("I") POSTED"
+                        SendMsg.I    = ""
+                        NbrMsgToPost = NbrMsgToPost - 1
+                     End
+                     Else
+                     If AddOk = 2 then do
+                        Call Display What"("I") REMOVED"
+                        SendMsg.I    = ""
+                        NbrMsgToPost = NbrMsgToPost - 1
+                     End
+                     Else
+                        Call Display What"("I") KEPT"
+                  End
+               End
+            End
+            Call BalUnlock
+         End
+         Call CheckTmstp
+      End
+
+      Otherwise
+         Call Display "UNSUPPORTED COMMAND "Cmd
+   End
+End
+Call BalUnlock
+return
+
+CheckTmstp:
+if InitBalDone = 0 then return
+
+SIGNAL ON SYNTAX NAME CheckTmstpR
+tmptmstp = Stream(BalName,'c','query datetime')
+SIGNAL ON SYNTAX NAME StandardSyntax
+if tmptmstp \= BalTmstp then do
+   if BalGet() = 0 then do
+      tmptmstp = Stream(BalName,'c','query datetime')
+      BalTmstp = tmptmstp
+   End
+End
+CheckTmstpR:
+SIGNAL ON SYNTAX NAME StandardSyntax
+return
+
+BalCheckLock:
+if BalLock = "" then
+   BalLocked = 1
+else do
+   Status = Strip(Stream(BalLock,"c","open write"))
+   if Status = "READY:" then
+      BalLocked = 0
+   else
+      BalLocked = 1
+end
+return BalLocked
+
+BalUnlock:
+if BalLocked = 1 | BalLock = "" then return
+Status    = Stream(BalLock,'c','close')
+BalLocked = 1
+return
+
+
+BalOpen:
+Do 5
+   if BalCheckLock() = 0 then Leave
+   Call Sleep 1
+End
+
+if BalLocked = 1 then do
+   Call Display "BAL IS BUSY - AUTOMATIC TRY LATER ON"
+   TryLater = 1
+End
+Else do
+   TryLater = 0
+End
+Return TryLater
+
+BalClose:
+if BalLocked = 0 then Call BalUnlock
+TryLater = 0
+return
+
+BalAddSomething:
+Parse arg tUsr tData
+
+TimeAndDate = "TIMESTAMP["DATE("E")"-"TIME("L")"]"
+
+if Anonymous = 0 then
+   Msg = "FROM "User" TO USER="tUsr","TimeAndDate","tSome"="tData
+else
+   Msg = "FROM ? TO USER="tUsr","TimeAndDate","tSome"="tData
+Return
+
+BalAddMsg:
+Parse arg tUsr tData
+tSome = "MSG"
+Call BalAddSomething tUsr tData
+Call BalAddData
+return
+
+BalAddAck:
+Parse arg tUsr tData
+tSome = "ACK"
+Call BalAddSomething tUsr tData
+Call BalAddData
+return
+
+BalAddCmd:
+Parse arg tUsr tData
+tSome = "CMD"
+Call BalAddSomething tUsr tData
+Call BalAddData
+return
+
+BalAddFile:
+Parse arg tUsr tData
+
+TimeAndDate = "TIMESTAMP["DATE("E")"-"TIME("L")"]"
+
+if Stream(tData,'c','QUERY EXISTS') = "" then do
+   /* Clear data because file doen't exist */
+   AddOk = 2
+   return
+end
+
+TmpFile = SysTempFileName(BalPath"BAL?????")
+fName   = FileSpec('name',tData)
+if Anonymous = 0 then
+   Msg = "FROM "User" TO USER="tUsr","TimeAndDate",FILE="TmpFile",NAME="fName
+else
+   Msg = "FROM ? TO USER="tUsr","TimeAndDate",FILE="TmpFile",NAME="fName
+
+'COPY 'tData' 'TmpFile' /B > nul 2>&1'
+if rc = 0 then
+   Call BalAddData
+Else do
+   Call Display "COPY FILE "tData" FAILED"
+   AddOk = 2
+End
+return
+
+BalAddData:
+if BalName = "" then do
+   AddOk = 2
+   return
+end
+
+if BalOpen() \= 0 then do
+   AddOk = 0
+   return
+end
+Msg    = 'PROCESS='ProcessName' 'Msg
+Status = LineOut(BalName,Msg)
+
+if Status = 0 then
+   AddOk = 1
+Else
+   AddOk = 0
+
+Status = LineOut(BalName)
+Return
+
+
+BalGet:
+TryLater = 1
+if BalName = "" then return TryLater
+if BalOpen() \= 0 then return TryLater
+
+DoIt = 0
+If Stream(BalName,'c','query exists') \= "" then
+   If Stream(BalName,'c','query size') > 0 then DoIt = 1
+
+If TryLater = 0 & DoIt = 1 then do
+   'cp 'BalName' 'FicMailTmp' > nul 2>&1'
+   if rc = 0 then do
+      if Stream(FicMailTmp,'c','open read') = 'READY:' then do
+         'rm 'BalName' > nul 2>&1'
+
+         Do while Lines(FicMailTmp) > 0
+            L = LineIn(FicMailTmp)
+            Parse var L a"PROCESS="sProcess" FROM "Who" TO USER="sUsr","TimeAndDate","What"="tData
+            if a = "CANCELED" then sUsr = ""
+
+            if sUsr \= User then
+               Status = LineOut(BalName,L)
+            else do
+               Parse var TimeAndDate x"["TimeAndDate"]"
+
+               Call History
+               Select
+                  When What = "MSG" then do
+                     Call DoBeep 440,100
+                     Call SysOut "AT "TimeAndDate" RECEIVED 1 MSG FROM "Who": "tData
+                     If Who \= "?" then Rc = PostMessage( ProcessName, "", "SEND ACK TO "Who" "tData )
+                  End
+                  When What = "ACK" then do
+                     Call SysOut "AT "TimeAndDate" RECEIVED 1 ACK FROM "Who": "tData
+                     Call Display "AT "TimeAndDate" RECEIVED 1 ACK FROM "Who": "tData
+                  End
+                  When What = "CMD" then do
+                     If Pos('PASSWORD', Translate(tData)) = 1 then do
+                        Parse var tData "PASSWORD("tPwd")"tData
+                        tData = strip(tData)
+                        tPwd  = strip(tPwd)
+                     End
+                     else tPwd = ""
+                     Call SysOut "AT "TimeAndDate" RECEIVED 1 CMD FROM "Who": "tData
+                     If Who \= "?" then Rc = PostMessage( ProcessName, "", "SEND ACK TO "Who" "tData )
+                     if tPwd = UserPwd then do
+                        'echo execute 'tData
+                        If Rc = 1 then 'DETACH 'tData
+                     End
+                     else do
+                        Call Display "INVALID PASSWORD"
+                        If Who \= "?" then Rc = PostMessage( ProcessName, "", "SEND MSG TO "Who" PASSWORD VIOLATION !!!" )
+                     end
+                  End
+                  When What = "FILE" then do
+                     Call DoBeep 440,100
+                     Parse var tData lName",NAME="fName
+                     TmpFile = SysTempFileName("mail/BAL?????")
+                     tData   = lName
+                     Call SysOut "AT "TimeAndDate" RECEIVED 1 FILE("fName") FROM "Who": "TmpFile
+                     'cp 'tData' 'TmpFile' > nul 2>&1'
+                     if rc = 0 then do
+                        'rm 'tData' > nul 2>&1'
+                        If Who \= "?" then Rc = PostMessage( ProcessName, "", "SEND ACK TO "Who" (OK)-"tData"-"TmpFile )
+                     End
+                     else Do
+                        If Who \= "?" then Rc = PostMessage( ProcessName"", "SEND ACK TO "Who" (ERR)-"tData )
+                        Call Display "COPY FAILED - FROM "tData" TO "TmpFile
+                        L      = "CANCELED "L
+                        Status = LineOut(BalName,L)
+                     End
+                  End
+                  Otherwise
+                     Nop
+               End
+            End
+         End
+         Status = Stream(FicMailTmp,'c','close')
+         Status = Stream(BalName,'c','close')
+         'rm 'FicMailTmp' > nul 2>&1'
+      End
+      if Stream(BalName,'c','query exists') = "" then do
+         x = Stream(BalName,'c','open write')
+         x = Stream(BalName,'c','close')
+      End
+      Call BalUnlock
+   End
+End
+return TryLater
+
+History:
+if NoFicOut = 1 then return
+Status = LineOut(LocalBal,L)
+return
+
+DoBeep:
+Parse arg p1, p2
+return
 Return
 ProcUserHook:
 Return

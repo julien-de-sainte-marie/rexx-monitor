@@ -10,9 +10,9 @@ address SYSTEM 'echo $PPID |rxqueue'
 pull Pid
 
 if pProcess = "" then
-   Say "NOM OBLIGATOIRE (* pour tous)"
+   Say "NOM OBLIGATOIRE (all pour tous)"
 else
-if Pos( "*", pProcess ) > 0 then do
+if Pos( "all", pProcess ) > 0 then do
 
    Rc = SysFileTree( "pgm", "Liste", "F" )
    Do flI = 1 to Liste.0

@@ -2,12 +2,12 @@
 Main:
 
 If FirstInstance = 0 then do
-   Call Display "Pas plus d'une instance ne peut etre activ‚e !"
+   Call Display "Pas plus d'une instance ne peut etre activÂ‚e !"
    EndForce = 2
    Return
 End
 
-/* Le processus n'a pas ‚t‚ initialis‚ */
+/* Le processus n'a pas Â‚tÂ‚ initialisÂ‚ */
 if ProcessInitialized = 0 then do
    /* Initialisation des variables */
    DdeIniName  = "INI\DDE.INI"
@@ -35,11 +35,11 @@ Select
       End
 
       if SysAddService( DdeService ) = 0 then do
-         Call Display "Cr‚ation du service "DdeService" impossible !"
+         Call Display "CrÂ‚ation du service "DdeService" impossible !"
          EndForce = 2
          Return
       End
-      Call Display "Initialisation termin‚e."
+      Call Display "Initialisation terminÂ‚e."
 
    End
 

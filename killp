@@ -1,2 +1,2 @@
-#!/usr/bin/ksh
+#!/bin/sh
 rexx q.rexx ,SYS_KILLPROCESS,$1

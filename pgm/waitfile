@@ -1,6 +1,6 @@
 /**********************************************************************************************************
-Ce programme détecte la présence de nouveaux fichiers dans un répertoire distant et exécute une action
-sur évènement.
+Ce programme dÃ©tecte la prÃ©sence de nouveaux fichiers dans un rÃ©pertoire distant et exÃ©cute une action
+sur Ã©vÃ¨nement.
 
 **********************************************************************************************************/
 Main:
@@ -10,7 +10,7 @@ Select
    When msgCmd = SysVars.SysLEnd then 
       Call Arreter
 
-   /* Initialisation du process demandée */
+   /* Initialisation du process demandÃ©e */
    When msgCmd = SysVars.SysLInit then Do
       If ProcessInitialized = 0 then Do
          If SysAddService("WAITFILE_MASTER") = 1 Then Do
@@ -48,7 +48,7 @@ Select
       End
    End
 
-   /* Rien à faire ... */
+   /* Rien Ã  faire ... */
    When msgCmd = SysVars.SysLIdle then
       If FirstInstance = 0 Then Call Lister
 
@@ -379,7 +379,7 @@ Return
 
 /**********************************************************************************************************
 
-      Liste le contenu d'un répertoire.
+      Liste le contenu d'un rÃ©pertoire.
 
 **********************************************************************************************************/
 Lister:

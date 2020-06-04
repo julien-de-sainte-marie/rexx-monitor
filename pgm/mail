@@ -1,9 +1,9 @@
-/* Proc‚dure principale */
+/* ProcÂ‚dure principale */
 Main:
 Ligne = msgCmd
 
 If FirstInstance = 0 then do
-   Call Display "Pas plus d'une instance ne peut être activée !"
+   Call Display "Pas plus d'une instance ne peut Ãªtre activÃ©e !"
    EndForce = 2
    Return
 End

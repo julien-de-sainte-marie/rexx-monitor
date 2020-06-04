@@ -1,4 +1,4 @@
-/* Procédure principale */
+/* ProcÃ©dure principale */
 Main:
 Parse arg Ligne
 
@@ -76,29 +76,29 @@ SIGNAL ON HALT   NAME TrtCmdErr
 Select
    When a1 = "LOG" then do
       Call SysCls
-      'TYPE LOG\MONITOR.MSG | MORE'
+      'clear && cat log\\monitor.msg | more'
    End
    When a1 = "HELP" then do
       Call SysCls
       Say "********************** AIDE GENERALE *****************************************"
       Say "ME LIST [ PROCESS | EVENTS | MESSAGES ][, fichier]"
-      Say "ME EXEC CMD commande                    Ex‚cuter une commande"
-      Say "ME EXEC CALL fonction                   Ex‚cuter une fonction"
-      Say "ME EXEC PRO programme                   Ex‚cuter un programme"
-      Say "ME EXEC FILE fichier                    Ex‚cuter un fichier"
+      Say "ME EXEC CMD commande                    ExÂ‚cuter une commande"
+      Say "ME EXEC CALL fonction                   ExÂ‚cuter une fonction"
+      Say "ME EXEC PRO programme                   ExÂ‚cuter un programme"
+      Say "ME EXEC FILE fichier                    ExÂ‚cuter un fichier"
       Say "ME END                                  Terminer le process"
       Say "ME CREATE EVENT nom                     Ajouter un identifiant de message"
-      Say "ME ADD EVENT nom message                Affecter un message … 'nom'"
-      Say "ME CLEAR EVENT nom                      Supprimer les messages affect‚s … 'nom'"
+      Say "ME ADD EVENT nom message                Affecter un message Â… 'nom'"
+      Say "ME CLEAR EVENT nom                      Supprimer les messages affectÂ‚s Â… 'nom'"
       Say "ME DELETE EVENT nom                     Supprimer un identifiant de message"
-      Say "ME LOG                                  Afficher la LOG systŠme"
-      Say "TRUNCLOG                                Effacer la LOG systŠme"
+      Say "ME LOG                                  Afficher la LOG systÂŠme"
+      Say "TRUNCLOG                                Effacer la LOG systÂŠme"
       Say "process message                         Envoyer un message pour un process"
-      Say "        EXECCMD commande                Ex‚cuter une commande par un process"
-      Say "        SETTIME nn                      Dur‚e des boucles de sommeil"
-      Say "        TRACE [ ON | OFF ]              Activer/d‚sactiver la trace du process"
+      Say "        EXECCMD commande                ExÂ‚cuter une commande par un process"
+      Say "        SETTIME nn                      DurÂ‚e des boucles de sommeil"
+      Say "        TRACE [ ON | OFF ]              Activer/dÂ‚sactiver la trace du process"
       Say "        WAIT                            Mettre le process en sommeil"
-      Say "        WAKE                            R‚veiller le process"
+      Say "        WAKE                            RÂ‚veiller le process"
       Say ""
    End
    when a1 = "EXEC" then do
@@ -153,7 +153,7 @@ cerr = rc
 Say ""
 Say "***************************** ATTENTION *****************************"
 Say "*****            Erreur de traitement de la commande            *****"
-Say "*****           Reprise sur fin de proc‚dure effectu‚e          *****"
+Say "*****           Reprise sur fin de procÂ‚dure effectuÂ‚e          *****"
 Say "***************************** ATTENTION *****************************"
 Say "Systeme error #"cerr
 Say "Systeme message "errortext(cerr)

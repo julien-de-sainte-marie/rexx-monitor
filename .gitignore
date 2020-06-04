@@ -1,1 +1,5 @@
-rexx/
+dbg/
+exe/
+lock/
+log/
+.idea/

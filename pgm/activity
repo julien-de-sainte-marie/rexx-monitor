@@ -45,7 +45,7 @@ Return
 Lister:
 
 /***
-   Vider la file d'attente des SYS_ETAT et valoriser l'état des process
+   Vider la file d'attente des SYS_ETAT et valoriser l'Ã©tat des process
 ***/
 Avant = SetQueue(SysVars.SysEtatQueue)
 nbi   = Queued()
@@ -269,7 +269,7 @@ Address SYSTEM 'clear'
 Say "                                  ACTIVITY"
 Say ""
 Say "LOG-Visualiser la LOG du moniteur   DEBUG-Visualiser les messages du moniteur"
-Say "O-Stopper  D-Désactiver  A-Activer  P-Purger   S-Log du process"
+Say "O-Stopper  D-DÃ©sactiver  A-Activer  P-Purger   S-Log du process"
 Say ""
 Say "Process                                --------------- TIME ---------------"
 Say "                  Queue                Loop Wait CPU              UserProc          Etat"

@@ -1,2 +1,2 @@
-#!/usr/bin/ksh
+#!/bin/sh
 rexx build.rexx $1 $2

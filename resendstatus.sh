@@ -1,4 +1,4 @@
-#!/usr/bin/ksh
+#!/bin/sh
 m=`ps -fu monitor | grep -c cmd/monitor.rexx`
 if [ $m = 2 ]
 then

@@ -1,7 +1,7 @@
 #!/usr/bin/ksh
 if [ "$1" = "" ] || [ "$2" = "" ];
 then
-   echo "Syntaxe : killwsock.sh propriétaire process"
+   echo "Syntaxe : killwsock.sh propriÃ©taire process"
    echo "Calling killwsock.sh monitor wsock"
    . ./killwsock.sh monitor wsock
 else

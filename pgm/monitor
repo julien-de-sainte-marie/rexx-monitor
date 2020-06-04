@@ -91,7 +91,7 @@ Do ForEver
 
    if CtrlAttn = 1 | SysStopAsked = 1 then do
       Call ThrowLogM ProcessName, "SHUTTING DOWN"
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du process demandé ..."
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "ArrÃªt du process demandÃ© ..."
       Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Il y a actuellement "NumberProcess" process actifs"
       Call StopAllProcess
       SysVars.SysStopping  = 1
@@ -116,7 +116,7 @@ Do ForEver
    End
 
    if SysStopAsked = 2 then  Do
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du moniteur forcé !"
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "ArrÃªt du moniteur forcÃ© !"
       Leave
    End
 
@@ -159,7 +159,7 @@ Do mI = 1 to LocalProcess.0
    if mQ \= "" then do
       Rc = CancelLoopForProcess( mQ )
       Rc = LinkMessage( mQ, "SYS_STOP", SysVars.SysLEnd )
-      Call Printf SysVars.SysMonName, MsgLLevelDisplaySyst, "Arrêt demandé pour "mQ
+      Call Printf SysVars.SysMonName, MsgLLevelDisplaySyst, "ArrÃªt demandÃ© pour "mQ
 
    End
 
@@ -524,12 +524,10 @@ Return
 -------------------------------------------------------------------------------------- */
 MonitorStartQueueSys:
 msqsRC = Value("Rxstack_run",,Share)
-If msqsRC \= "NO" Then Do
-   Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Démarrage du service de gestion des files d'attente ..."
-/***
+If msqsRC \= "NO" & SysVars.FirstInstance = 1 Then Do
+   Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "DÃ©marrage du service de gestion des files d'attente ..."
    Address SYSTEM 'rxstack -d'
    Address SYSTEM 'sleep 1'
-***/
 End
 Else
    Rc = 0
@@ -542,13 +540,10 @@ Return Rc
 -------------------------------------------------------------------------------------- */
 MonitorStopQueueSys:
 msqsRC = Value("Rxstack_run",,Share)
-If msqsRC \= "NO" Then Do
+If msqsRC \= "NO" & SysVars.FirstInstance = 1 Then Do
    If TheFirstQueue = SysVars.SysQueue Then Do
-      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Arrêt du service de gestion des files d'attente ..."
-/***
+      Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "ArrÃªt du service de gestion des files d'attente ..."
       Address SYSTEM 'rxstack -k'
-***/
-/*
       Address SYSTEM 'ps > /tmp/monitor.ps.list'
       Do While Lines('/tmp/monitor.ps.list') > 0
          a=LineIn('/tmp/monitor.ps.list')
@@ -558,7 +553,6 @@ If msqsRC \= "NO" Then Do
             leave
          end
       end
-*/
    End
    Else
       Rc = 2
@@ -577,7 +571,7 @@ Else
    TheFirstQueue = ""
 /***********************************************
 if TheFirstQueue \= SysVars.SysQueue then do
-   Say "Monitor déjà actif !"
+   Say "Monitor dÃ©jÃ  actif !"
    do I = 1 to LocalQueue.0
       if LocalQueue.I \= "" then
          Call RxQueue 'Delete', LocalQueue.I
@@ -586,7 +580,7 @@ if TheFirstQueue \= SysVars.SysQueue then do
 End
 ********/
 
-/* Libell‚s */
+/* LibellÂ‚s */
 MsgLLevelDisplaySyst  = "LEVEL_SYSTEM"
 MsgLLevelDisplayRecv  = "LEVEL_RECEIVE"
 MsgLLevelDisplaySend  = "LEVEL_SEND"
@@ -602,22 +596,24 @@ MsgLevelDisplayDebug = GetProfileString( , "DISPLAY", MsgLLevelDisplayDebug, "NO
 LogFileName          = GetProfileString( , "LOG", "FileName", "" )
 LogFileNameDbg       = GetProfileString( , "LOG", "FileNameDebug", "" )
 
-if AllocQueue( CpuQueue ) = "" then do
-   Say "Impossible de creer "CpuQueue" !"
-   do I = 1 to LocalQueue.0
-      if LocalQueue.I \= "" then
-         Call RxQueue 'Delete', LocalQueue.I
-   End
-   Exit
-End
+if SysVars.FirstInstance then do
+    if AllocQueue( CpuQueue ) = "" then do
+       Say "Impossible de creer "CpuQueue" !"
+       do I = 1 to LocalQueue.0
+          if LocalQueue.I \= "" then
+             Call RxQueue 'Delete', LocalQueue.I
+       End
+       Exit
+    End
 
-if AllocQueue( SysVars.SysEtatQueue ) = "" then do
-   Say "Impossible de creer "SysVars.SysEtatQueue" !"
-   do I = 1 to LocalQueue.0
-      if LocalQueue.I \= "" then
-         Call RxQueue 'Delete', LocalQueue.I
-   End
-   Exit
+    if AllocQueue( SysVars.SysEtatQueue ) = "" then do
+       Say "Impossible de creer "SysVars.SysEtatQueue" !"
+       do I = 1 to LocalQueue.0
+          if LocalQueue.I \= "" then
+             Call RxQueue 'Delete', LocalQueue.I
+       End
+       Exit
+    End
 End
 
 Return
@@ -1169,7 +1165,7 @@ if lpR = 0 then do
 End
 Else do
 
-   lpX = FindLockX( lkRsrc, lkWho )        /* Un verrou type 'X' posé ? */
+   lpX = FindLockX( lkRsrc, lkWho )        /* Un verrou type 'X' posÃ© ? */
    if lpX = 1 then Return 0
 
    lpO = FindLockOwner( lkWho )

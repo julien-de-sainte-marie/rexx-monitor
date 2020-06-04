@@ -13,18 +13,11 @@ ProcessName = Strip( ProcessName )
 if ProcessName = "" then do
    Parse Source A1 A2 FullProcessName Reste
 
-   ProcessName = FileSpec( "name", FullProcessName )
-   Parse var ProcessName ProcessName"."Reste
+   psProcessName = FileSpec( "name", FullProcessName )
+   Parse var psProcessName ProcessName"."Reste
 End
 
 ProcessName = Translate(Strip( ProcessName ))
-
-/*
-if Length( ProcessName ) > 8 then do
-   Say "Nom du process trop grand (8 car. maximum) !"
-   Return
-End
-*/
 
 address SYSTEM 'echo $PPID |rxqueue'
 Pull SysVars.PID
@@ -59,6 +52,8 @@ SysVars.SysElapsedAll   = 0
 SysVars.SysRacine       = ""
 SysVars.fileWSOCK       = "/etc/xchglistener.ini"
 SysVars.SysWriteSysout  = GetProfileString( , "SYSOUT", "TRACE", "NO" )
+SysVars.SysSleepDelay   = GetProfileString( , "SYSTEM", "SLEEP_DELAY", "1" )
+SysVars.SysSleepexDelay = GetProfileString( , "SYSTEM", "SLEEPEX_DELAY", "0.2" )
 SysVars.SysLoopDelay    = GetProfileString( , "SYSTEM", "LOOP_DELAY", "1" )
 SysVars.SysLoopBreak    = GetProfileString( , "SYSTEM", "LOOP_BREAK", "1" )
 SysVars.SysTSleep       = GetProfileString( , "SYSTEM", "LOOP_SLEEP", "0.5" )
@@ -69,6 +64,7 @@ SysVars.SysDetectMon    = Translate(GetProfileString( , "SYSTEM", "DETECT_RUN_LO
 SysVars.SysStopRedoT    = GetProfileString( , "SYSTEM", "LOOP_BEFORE_FORCE", "100" )
 SysVars.SysSendMessageQueue = ""
 SysVars.SysProcessLockName  = SysVars.SysLockPath""SysVars.SysMonName".LOK"
+SysVars.FirstInstance   = 0
 SysVars.TID             = "0"
 SysVars.PPRIO           = "0"
 SysVars.TPRIO           = "0"
@@ -86,7 +82,6 @@ LocalQueue.0            = 0
 LocalProcess.0          = 0
 TimeToWait              = 1
 NumberProcess           = 0
-FirstInstance           = 0
 ProcessInitialized      = 0
 ProcessLockName         = SysVars.SysLockPath""ProcessName".LOK"
 EndForce                = 0
@@ -104,13 +99,14 @@ Else
 rep            = VALUE("PIP_REP",,share)
 drive          = VALUE("PIP_DRV",,share)
 
-if strip(rep)   = "" then rep   = "/home/monitor"
+if strip(rep)   = "" then rep   = DIRECTORY()
 if strip(drive) = "" then drive = ""
 
 curdir         = DIRECTORY()
 PipDir         = drive""rep
 newdir         = DIRECTORY(PipDir)
 
+tempFirstInstance = 1
 if IAmMonitor = 0 then do
    if SysVars.SysDetectMon = "YES" Then /* JSM 13.03.2003 Here */
       if Stream( SysVars.SysProcessLockName, 'c', 'query exists' ) = "" then do
@@ -119,13 +115,22 @@ if IAmMonitor = 0 then do
       End
 End
 Else do
-   Address SYSTEM 'rm lock/* 1>/dev/null 2>&1'
+    SysVars.FirstInstance = 1
+    Address SYSTEM 'ps -eaf | grep 'psProcessName' | grep -v grep > /tmp/monitor.ps.list'
+    Do While Lines('/tmp/monitor.ps.list') > 0
+        a=LineIn('/tmp/monitor.ps.list')
+         if pos(psProcessName,a) > 0 then do
+                tempFirstInstance = 0
+                leave
+         end
+    end
+   Address SYSTEM 'rm lock/* 1>/dev/null 2>&1' /* */
 End
 
 if Stream( ProcessLockName, 'c', 'query exists' ) = "" then do
-   FirstInstance  = 1
-   Rc             = Stream( ProcessLockName, 'c', 'open write' )
-   Rc             = Stream( ProcessLockName, 'c', 'close' )
+   SysVars.FirstInstance  = tempFirstInstance
+   Rc                     = Stream( ProcessLockName, 'c', 'open write' )
+   Rc                     = Stream( ProcessLockName, 'c', 'close' )
 End
 
 if IAmMonitor = 1 then Call MonitorPrologue
@@ -162,10 +167,10 @@ Call ThrowLog "FREEING"
 tm = FreeProcess()
 do I = 1 to LocalQueue.0
    if LocalQueue.I \= "" then
-      Call RxQueue 'Delete', LocalQueue.I
+      Call RxQueue 'Delete', LocalQueue.I"@127.0.0.1"
 End
 
-if FirstInstance  = 1 then
+if SysVars.FirstInstance  = 1 then
    Address SYSTEM 'rm 'ProcessLockName' 1>/dev/null 2>&1'
 
 Call ThrowLog "DOWN"
@@ -233,7 +238,6 @@ Do I = 1 to Help.0
 End
 Return
 /* =================================================================================== */
-
 /*************************************************************************************
                            API des outils de MONITOR
                            =========================
@@ -243,13 +247,11 @@ Return
    AllocQueue
 -------------------------------------------------------------------------------------- */
 AllocQueue:
-Trace Off
+Trace off
 Arg pArg1
 Call SysOut "AllocQueue: "pArg1
 
 oldQ = rxQueue('get')
-Parse Var oldQ oldQ"@"ResteX
-
 
 if pArg1 = '' then do
 
@@ -263,10 +265,12 @@ if pArg1 = '' then do
 End
 Else do
 
-   aqNom = RxQueue( 'create', pArg1 )
-   Parse Var aqNom aqNom"@"ResteX
-   if aqNom = pArg1 then do
+   aqNom = RxQueue( 'create', pArg1"@127.0.0.1" )
+   Parse Var aqNom naqNom"@"ResteX
 
+   if naqNom = pArg1 then do
+
+      aqNom          = naqNom
       I              = LocalQueue.0
       I              = I + 1
       LocalQueue.I   = aqNom
@@ -301,7 +305,7 @@ fqOk = 9
 do I = 1 to LocalQueue.0
    if LocalQueue.I = fqArg1 then do
       LocalQueue.I = ""
-      fqOk         = RxQueue( "delete", fqArg1 )
+      fqOk         = RxQueue( "delete", fqArg1"@127.0.0.1" )
       Leave
    End
 End
@@ -341,14 +345,16 @@ return R
    SetQueue
 -------------------------------------------------------------------------------------- */
 SetQueue: PROCEDURE EXPOSE LockedProcess CtrlAttn SysVars.
-Trace Off
+Trace off
 Arg Arg1
 Signal On Syntax Name SetQueueSyntax
 Call SysOut "SetQueue: "Arg1
 
 if Arg1 = "" then Signal SetQueueSyntax
 
-Nom = RxQueue( "set", arg1 )
+Nom = RxQueue( "set", arg1"@127.0.0.1"  )
+Parse Var Nom Nom"@"ResteX
+
 Signal SetQueueRetour
 
 SetQueueSyntax:
@@ -358,6 +364,19 @@ SetQueueRetour:
 Signal On Syntax Name StandardSyntax
 Call SysOut "SetQueue returns: "Nom
 return Nom
+/* =================================================================================== */
+
+
+/* -----------------------------------------------------------------------------------
+   Get Queue name
+-------------------------------------------------------------------------------------- */
+GetQueueName:
+Trace Off
+
+qName = rxQueue('get')
+Parse Var qName qName"@"ResteX
+
+return qName
 /* =================================================================================== */
 
 
@@ -428,14 +447,59 @@ Else do
       Avant = SetQueue( SysVars.SysQueue )
    Else
       Avant = SetQueue( SysVars.SysEtatQueue )
-
+   
    if Avant \= "" then do
 
-      If Translate(msgData) \= SysVars.SysLEnd Then
+      If Translate(msgData) \= SysVars.SysLEnd Then 
          Call QueueData MSG
       Else
          Call PushData MSG
+      
+      Apres = SetQueue( Avant )
+      Ok    = 1
 
+   End
+   Else Ok = 0
+
+End
+Signal PostMessageRetour
+
+PostMessageError:
+Apres = SetQueue( Avant )
+Ok    = 0
+
+PostMessageRetour:
+Signal On Syntax Name StandardSyntax
+Call SysOut "PostMessage returns: "Ok
+return Ok
+/* =================================================================================== */
+
+/* -----------------------------------------------------------------------------------
+   PostMessageTop
+-------------------------------------------------------------------------------------- */
+PostMessageTop: PROCEDURE EXPOSE SysVars. LockedProcess CtrlAttn
+Trace Off
+Parse Arg msgTo, msgId, msgData
+
+Signal On Syntax Name PostMessageError
+Call SysOut "PostMessage: "msgTo","msgId","msgData
+
+if msgTo = '' then msgTo = SysVars.SysMonName
+
+MSG = FormatMessage( SysVars.SysWhoAmI, msgTo, msgId, msgData )
+if MSG = 0 then
+   Ok = 0
+Else do
+
+   If msgId \= "SYS_ETAT" Then
+      Avant = SetQueue( SysVars.SysQueue )
+   Else
+      Avant = SetQueue( SysVars.SysEtatQueue )
+   
+   if Avant \= "" then do
+
+      Call PushData MSG
+      
       Apres = SetQueue( Avant )
       Ok    = 1
 
@@ -456,7 +520,6 @@ return Ok
 /* =================================================================================== */
 
 
-
 /* -----------------------------------------------------------------------------------
    PushData
 -------------------------------------------------------------------------------------- */
@@ -464,7 +527,7 @@ PushData:
 Trace Off
 Parse Arg aData
 
-Call SysOut "PushData("RxQueue('get')"): "aData
+Call SysOut "PushData("GetQueueName()"): "aData
 
 Push aData
 
@@ -476,10 +539,10 @@ return
    PullData
 -------------------------------------------------------------------------------------- */
 PullData:
-Trace Off
+Trace off
 Parse Arg bWait
 
-Call SysOut "PullData("RxQueue('get')"): "bWait
+Call SysOut "PullData("GetQueueName()"): "bWait
 
 if bWait = "" | DataType( bWait ) = CHAR then bWait = 0
 pdWait = bWait
@@ -506,7 +569,7 @@ QueueData:
 Trace Off
 Parse Arg aData
 
-Call SysOut "QueueData("RxQueue('get')"): "aData
+Call SysOut "QueueData("GetQueueName()"): "aData
 
 QUEUE aData
 
@@ -581,7 +644,6 @@ return Ok
 /* =================================================================================== */
 
 
-
 /* -----------------------------------------------------------------------------------
    WaitMessage
 -------------------------------------------------------------------------------------- */
@@ -605,7 +667,7 @@ if CreatedProcess = 1 | isCreating = 1 then do
    if pTimeOut = "" | DataType( pTimeOut ) \= "NUM" | pTimeOut < 0 then pTimeOut = 0
 
    if pQueue \= '' then do
-      if pQueue \= RxQueue( 'get' ) then do
+      if pQueue \= GetQueueName() then do
 
          WMqueue = SetQueue( pQueue )
          if WMqueue = '' then Ok = 0
@@ -617,7 +679,7 @@ if CreatedProcess = 1 | isCreating = 1 then do
    if Ok = 1 & IAmMonitor = 0 then do
 
       if NoPost = 0 then
-         Ok = PostMessage( , "SYS_BEGINLOOP", RxQueue( 'get' ))
+         Ok = PostMessage( , "SYS_BEGINLOOP", GetQueueName())
 
       MSG = WaitMessageLoop(pTimeOut)
 
@@ -1242,7 +1304,7 @@ return DdeRc
 
 /* -----------------------------------------------------------------------------------
    monSleep
-      Periode: Dur�e d'attente exprim�e en seconde
+      Periode: Dur\E9e d'attente exprim\E9e en seconde
 -------------------------------------------------------------------------------------- */
 monSleep:
 Trace Off
@@ -1262,7 +1324,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SleepEx
-      Periode: Dur�e d'attente exprim�e en seconde
+      Periode: Dur\E9e d'attente exprim\E9e en seconde
 -------------------------------------------------------------------------------------- */
 SleepEx:
 Trace Off
@@ -1274,7 +1336,7 @@ If Periode > 0 Then Do
    Call ProcStartTimer Periode
    Do Forever
       If Queued() > 0 Then Leave
-      Call Sleep 0.2
+      Call Sleep SysVars.SysSleepexDelay
    End
    If Queued() > 0 Then Do
       Parse Pull slexQ
@@ -1292,8 +1354,8 @@ Return slexRC
 
 /* -----------------------------------------------------------------------------------
    SysSleep
-      Periode: Dur�e d'attente exprim�e en seconde
-      La fonction se r�veille si une donn�e est dans la file d'attente
+      Periode: Dur\E9e d'attente exprim\E9e en seconde
+      La fonction se r\E9veille si une donn\E9e est dans la file d'attente
 -------------------------------------------------------------------------------------- */
 SysSleep:
 Trace Off
@@ -1302,19 +1364,19 @@ Arg dwT
 ssDelay=dwT
 if ssDelay <= 0 then ssDelay = 1
 Do Forever
-   Call Sleep 1
+   Call Sleep SysVars.SysSleepDelay
    If Queued() > 0 Then Do
       Leave
    End
-   ssDelay = ssDelay - 1
-   If ssDelay = 0 Then Leave
+   ssDelay = ssDelay - SysVars.SysSleepDelay
+   If ssDelay <= 0 Then Leave
 End
 Return ssDelay
 /* =================================================================================== */
 
 /* -----------------------------------------------------------------------------------
    SysCls
-      Efacer l'�cran
+      Efacer l'\E9cran
 -------------------------------------------------------------------------------------- */
 SysCls:
 Trace Off
@@ -1325,7 +1387,7 @@ Return
 
 /* -----------------------------------------------------------------------------------
    SysFileTree
-      Lister les fichiers d'un r�pertoire
+      Lister les fichiers d'un r\E9pertoire
 -------------------------------------------------------------------------------------- */
 SysFileTree:
 Trace Off
@@ -1351,7 +1413,7 @@ Return 0
 
 /* -----------------------------------------------------------------------------------
    getWSOCKIP
-       R�cup�rer l'adresse IP de la tour de controle
+       R\E9cup\E9rer l'adresse IP de la tour de controle
 -------------------------------------------------------------------------------------- */
 getWSOCKIP:
 Trace Off
@@ -1363,8 +1425,8 @@ End
 Else Do
    if wsockIPP = "" Then
       wsockIPP = Value("WSOCKIP",,Share)
-
-   If wsockIPP \= "" Then
+      
+   If wsockIPP \= "" Then 
       Parse Var wsockIPP wsockIP":"wsockPort
    Else Do
       wsockIP   = "127.0.0.1"
@@ -1437,7 +1499,7 @@ do FOREVER
       xSysGetCmd = PullData()
       xSysGetCmd = Strip( xSysGetCmd )
 
-      Call Sysout "SysMainLoop pulled "rxqueue('get')": "xSysGetCmd
+      Call Sysout "SysMainLoop pulled "GetQueueName()": "xSysGetCmd
 
       if Left( xSysGetCmd, 1 ) = '~' then do
          GetCmd = Right( xSysGetCmd, Length( xSysGetCmd ) - 1 )
@@ -1472,9 +1534,9 @@ do FOREVER
             LoopTime = Time('E')
 
             if SetTrace = 1 then Trace I
-
+            
             Call Main msgCmd
-
+            
             Trace Off
             trTime         = Time('E') - LoopTime
             SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
@@ -1522,16 +1584,16 @@ do FOREVER
 
          if MonitorStat = 1 then
             Rc = PostMessage( , "SYS_ETAT", "N" )
-
+            
          LoopTime = Time('E')
          Call SysOut "Calling main with "msgCmd
 
          if SetTrace = 1 then Trace I
-
+         
          Call Main msgCmd
-
+         
          Trace Off
-
+         
          trTime         = Time('E') - LoopTime
          SysVars.SysElapsedCmd  = SysVars.SysElapsedCmd + trTime
          if SysVars.SysElapsedCmd = 0 then SysVars.SysElapsedCmd = SysVars.SysElapsedCmd + 0.01
@@ -1719,239 +1781,171 @@ if iscOk = 1 then Call ProcUserHook
 
 Return iscOk
 /* =================================================================================== */
-/*
-                                          Analyse des journaux TSM
-*/
+/* Procédure principale */
 Main:
+Parse arg Ligne
 
-/* Plusieurs images du process sont actives ? */
-If FirstInstance = 0 then do
-   tm = Display("Une autre instance du process est d�j� active. Fin de cette instance.")
-   EndForce = 1
-   Return
+Cmd = strip(msgCmd)
+
+/* Tester la fin de traitement */
+if Cmd = SysVars.SysLEnd then do
+   return
+end
+
+/* Initialisation */
+If ProcessInitialized = 0 then do
+   Call Display 'WAITCMD001M: Init phase begins'
+   CmdToProcess = ""
+   Cmd          = ""
+   Call Display 'WAITCMD002M: Init phase done'
+   Call SysOut ">>> Entrer une commande (me help pour obtenir de l'aide): ", "1"
+   InList         = 0
+   InListProcess  = 0
+   InListEvents   = 0
+   FicP           = ""
+   XcomSend       = "0000001"
+   SharedQ        = AllocQueue()
+end
+
+/* Named pipe plein ??? */
+if strip(Cmd) \= SysVars.SysLIdle & strip(Cmd) \= "" then do
+   Call ScanCmd
+end
+
+/* Lecture buffer clavier */
+if Lines() > 0 then do
+   Pull Cmd
+   Local = 1
+   Call ScanCmd
+   Local = 0
+end
+return
+
+ScanCmd:
+Perso = 0
+sCmd  = Cmd
+if perso = 0 then do
+   Parse var Cmd Dest " " Cmd
+   SELECT
+      When strip(Dest) = "ME" then do
+         if Local = 0 then Call SysOut sCmd, "1"
+         Call TrtCmd
+      end
+      When strip(Substr(Dest,1,4)) = "WAKE" then do
+         if Local = 0 then Call SysOut sCmd
+         Call Display "WAITCMD IS ALIVE"
+      end
+      Otherwise
+         if Local = 0 then Call SysOut sCmd, "1"
+         Cmd = sCmd
+         'Call q.rexx 'Cmd
+   end
+end
+Cmd = ""
+If InList <= 0 then do
+   Call SysOut ">>> Entrer une commande (me help pour obtenir de l'aide): ", "1"
+   InList = 0
 End
+return
+
+TrtCmd:
+Parse var Cmd a1" "Reste
+
+Call Display "*********** START TrtCmd ************"
+
+SIGNAL ON SYNTAX NAME TrtCmdErr
+SIGNAL ON HALT   NAME TrtCmdErr
 
 Select
-   /* Fin du process demand�e */
-   When msgCmd = SysVars.SysLEnd then do
-      Nop
+   When a1 = "LOG" then do
+      Call SysCls
+      'clear && cat log\\monitor.msg | more'
    End
-   /* Initialisation du process demand�e */
-   When msgCmd = SysVars.SysLInit then do
-      tm = Display("Initialisation du process en cours.")
-
-      tmpfile = "/tmp/scantsmlog.log"
-
-      tm = Display("Initialisation du process termin�e.")
+   When a1 = "HELP" then do
+      Call SysCls
+      Say "********************** AIDE GENERALE *****************************************"
+      Say "ME LIST [ PROCESS | EVENTS | MESSAGES ][, fichier]"
+      Say "ME EXEC CMD commande                    Excuter une commande"
+      Say "ME EXEC CALL fonction                   Excuter une fonction"
+      Say "ME EXEC PRO programme                   Excuter un programme"
+      Say "ME EXEC FILE fichier                    Excuter un fichier"
+      Say "ME END                                  Terminer le process"
+      Say "ME CREATE EVENT nom                     Ajouter un identifiant de message"
+      Say "ME ADD EVENT nom message                Affecter un message  'nom'"
+      Say "ME CLEAR EVENT nom                      Supprimer les messages affects  'nom'"
+      Say "ME DELETE EVENT nom                     Supprimer un identifiant de message"
+      Say "ME LOG                                  Afficher la LOG systme"
+      Say "TRUNCLOG                                Effacer la LOG systme"
+      Say "process message                         Envoyer un message pour un process"
+      Say "        EXECCMD commande                Excuter une commande par un process"
+      Say "        SETTIME nn                      Dure des boucles de sommeil"
+      Say "        TRACE [ ON | OFF ]              Activer/dsactiver la trace du process"
+      Say "        WAIT                            Mettre le process en sommeil"
+      Say "        WAKE                            Rveiller le process"
+      Say ""
    End
-   /* Rien � faire ... */
-   When msgCmd = SysVars.SysLIdle then do
-      Nop
+   when a1 = "EXEC" then do
+      parse var Reste a1" "Reste
+      select
+         when a1 = "CMD" then do
+            Interpret Reste
+         end
+         when a1 = "CALL" then do
+            Cmd = "Call "Reste
+            Interpret Cmd
+         end
+         when substr(a1,1,3) = "PRO" then do
+            Reste
+         end
+         when a1 = "FILE" then do
+            "Call" Reste
+         end
+         otherwise
+            Call SysOut "Error EXEC invalide", "1"
+            Call SysOut "Err: "a1"," Reste, "1"
+      end
+   end
+   when a1 = "END" then
+      EndForce = 2
+   when a1 = "LIST" then do
+      If Pos(",",Reste) > 0 then do
+         Parse var Reste Reste","FicP
+         Reste = Strip(Reste)
+         FicP  = Strip(FicP)
+      End
+      Else FicP = ""
+      Call Display "LIST:"Strip(Reste)":"SharedQ
+      Get = SendMessage( , "SYS_HOOK", "LIST:"Strip(Reste)":"SharedQ )
+      if Get = "DONE" then do
+         Avant = SetQueue( SharedQ )
+         do while Queued() > 0
+            Pull Ln1
+            Pull Ln2
+            Say Ln1"  ==  "Ln2
+         end
+         Rc = SetQueue( Avant )
+      end
    End
-   When Translate(Word(msgCmd,1)) = "ARCHIVE" then do
-      Call doArch
-   End
-   When Translate(Word(msgCmd,1)) = "SCAN" then do
-      Call doScan
-   End
-   When Translate(Word(msgCmd,1)) = "STATUS" then do
-      Call doStatus
-   End
-   OtherWise
-      Nop
+   otherwise
+      Call Display a1":"Strip(Reste)
 End
+Signal TrtCmdNoErr
+
+TrtCmdErr:
+cerr = rc
+Say ""
+Say "***************************** ATTENTION *****************************"
+Say "*****            Erreur de traitement de la commande            *****"
+Say "*****           Reprise sur fin de procdure effectue          *****"
+Say "***************************** ATTENTION *****************************"
+Say "Systeme error #"cerr
+Say "Systeme message "errortext(cerr)
+Say ""
+Say ""
+TrtCmdNoErr:
+Call Display "*********** END   TrtCmd ************"
+return
+
 Return
-
-/****************************************************************************
-      ARCHIVEr un journal TSM
-      -----------------------
-
-
-syntaxe : archive host=wwwww,file1=xxxxx,file2=yyyyy,target=zzzzz
-
-****************************************************************************/
-doArch:
-trace i
-Parse Var msgCmd x_cmd" "x_host","x_file1","x_file2","x_target
-Parse Var x_host p_host"="hostname
-Parse Var x_file1 p_file1"="serverfile
-Parse Var x_file2 p_file2"="clientfile
-Parse var x_target p_target"="targetdir
-
-
-/*****************************************************************
- Traitement du fichier serverfile, si il existe.
-*****************************************************************/
-ladate_u = date('u')
-ladate_s = date('s')
-
-if serverfile \= "" then do
-	tsf 	= serverfile
-	do while Pos("/",tsf) \= 0
-	   parse var tsf asup"/"tsf
-	End
-	if tsf 	= "" then do
-		Address System "ls -ltr "serverfile WITH OUTPUT STEM liste.
-		nbfile 	 = liste.0
-		lastfile = liste.nbfile
-		tsf 	 = lastfile
-		Parse Var tsf "start_backup_prod_"ladate".log"
-		/* on r�cup�re donc [ladate] au format ddmmyyyy */
-		/* on utilise SUBSTR(string, start, [length], [pad]) */
-		annee 	 = SUBSTR(ladate, 5, 4)
-		mois  	 = SUBSTR(ladate, 3, 2)
-		jour  	 = SUBSTR(ladate, 1, 2)
-		ladate_u = mois"/"jour"/"SUBSTR(annee, 3, 2)	/* format mm/dd/yy */
-		ladate_s = annee""mois""jour			/* format aaaammdd */
-	End
-	Parse Var tsf  tsf"."extension
-	targetfile 	 = targetdir"/"hostname"_"tsf"_Arch_"date('s')"."extension
-	Address System "cp "serverfile" "targetfile
-	Tm 	= Display("Action=archive,host="hostname",file="serverfile",target="targetfile)
-	todsp	= VerifArchive( targetfile, "ARRET DES PROCESS ORACLE APPLICATIONS SUR PRD" )
-	Tm	= Display(todsp)
-End
-
-
-/*****************************************************************
- Traitement du fichier clientfile, si il existe.
-*****************************************************************/
-if clientfile \= "" then do
-	tcf 	= clientfile
-	do while Pos("/",tcf) \= 0
-	   parse var tcf asup"/"tcf
-	End
-	Parse Var tcf tcf"."extension
-	targetfile  = targetdir"/"hostname"_"tcf"_"date('s')"."extension
-	/******************************************************************
-	   la partie ci-dessous est a am�liorer car elle ne fonctionne
-	   que si la sauvegarde se finie avant minuit...
-	******************************************************************/
-	Address System "rsh "hostname" grep "ladate_u" "filename" > "targetfile
-	Tm	= Display("Action=archive,host="hostname",file="clientfile",target="targetfile)
-	todsp	= VerifArchive( targetfile, "SCHEDULEREC OBJECT BEGIN" )
-	Tm	= Display(todsp)
-End
-
-
-
-return
-
-
-/********************************************************************************************
-      SCANner le log d'une sauvegarde TSM
-      -----------------------------------
-
-
-syntaxe : scan hos=xxxxx,inputdir=yyyyy,partname=zzzzz
-
-*/
-doScan:
-Parse Var msgCmd x_cmd" "x_host","x_indir","x_pname
-Parse Var x_host p_host"="hostname
-Parse Var x_indir p_indir"="inputdir
-Parse Var x_pname p_pname"="partname
-
-filename = inputdir"/"hostname"_"partname"_"date('s')
-
-tm       = Display("Action=scan,host="hostname",file="filename)
-
-do_display = 0
-ligne      = ""
-x_reste    = ""
-If Stream(filename, 'c', 'query exists' ) \= "" then Do
-   Tm = Stream(filename, 'c', 'open read' )
-   If Tm = 'READY:' then do
-      Do while Lines(filename) > 0
-         ligne = Strip(LineIn(filename))
-         Parse Var ligne x_date"   "x_time" "x_reste
-
-         Select
-            When Left(x_reste, 28) = "--- SCHEDULEREC STATUS BEGIN" Then Do
-               do_display = 1
-            End
-            When Left(x_reste, 26) = "--- SCHEDULEREC STATUS END" Then Do
-               do_display = 0
-            End
-            OtherWise
-               if do_display = 1 then tm = Display(x_date"-"x_time": "x_reste)
-         End
-      End
-      Tm = Stream(tmpfile, 'c', 'close')
-
-      /* Est-ce que la derni�re ligne lue correspond au mode �coute du dsmsched ? */
-      if x_reste = "Waiting to be contacted by the server." then
-         tm = Display("Le client TSM a termin� et attend d'�tre contact� � "x_date"-"x_time)
-      Else
-         tm = Display("Le client TSM n'a pas termin� la sauvegarde.")
-   End
-   else
-      tm = Display("Fichier temporaire non cr��.")
-End
-return
-
-/************************************************************************************************
-      STATistique depUis le log d'une Sauvegarde TSM
-      ----------------------------------------------
-
-
-syntaxe : status host=xxxxx,file=yyyyy
-
-*/
-doStatus:
-Parse Var msgCmd x_cmd" "x_host","x_file
-Parse Var x_host p_host"="hostname
-Parse Var x_file p_file"="filename
-
-tm = Display("Action=status,host="hostname",file="filename)
-Address System "rm "tmpfile" > /dev/null 2>&1"
-Address System "rsh "hostname" tail -5 "filename" > "tmpfile
-
-do_display = 0
-ligne      = ""
-x_reste    = ""
-If Stream(tmpfile, 'c', 'query exists' ) \= "" then Do
-   Tm = Stream(tmpfile, 'c', 'open read' )
-   If Tm = 'READY:' then do
-      Do while Lines(tmpfile) > 0
-         ligne = Strip(LineIn(tmpfile))
-      End
-      Tm = Stream(tmpfile, 'c', 'close')
-      Address System "rm "tmpfile" > /dev/null 2>&1"
-
-      /* Est-ce que la derni�re ligne lue correspond au mode �coute du dsmsched ? */
-      if x_reste = "Waiting to be contacted by the server." then
-         tm = Display("Le client TSM a termin� et attend d'�tre contact� � "x_date"-"x_time)
-      Else
-         tm = Display("Le client TSM n'a pas termin� la sauvegarde.")
-   End
-   else
-      tm = Display("Fichier temporaire non cr��.")
-End
-return
-
-
-/* -----------------------------------------------------------------------------------
-   VerifArchive
--------------------------------------------------------------------------------------- */
-VerifArchive:
-Parse Arg tgf, cetxt
-
-If Stream(tgf, 'c', 'query exists' ) = "" then
-   todsp = "Erreur � la cr�ation du fichier "targetfile
-Else Do
-   If Stream(tgf, 'c', 'query size' ) = 0 then
-      todsp = "L'archivage du fichier "tgf" est vide"
-   Else Do
-      Address System "grep -c '"cetxt"' "tgf WITH OUTPUT STEM test.
-      if test.1 > 0 then
-      	todsp = "Fichier archiv� sous "tgf
-      Else
-      	todsp = "le fichier archiv� "tgf" est invalide"
-   End
-End
-
-return todsp
-/* =================================================================================== */Return
 ProcUserHook:
 Return
