@@ -152,11 +152,22 @@ Return
 -------------------------------------------------------------------------------------- */
 StopAllProcess:
 
+Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Purge des queues system"
+Address SYSTEM 'rxqueue 'SysVars.SysEtatQueue' /clear'
+Address SYSTEM 'rxqueue 'CpuQueue' /clear'
+Address SYSTEM 'rxqueue 'SysVars.SysQueue' /clear'
 Do mI = 1 to LocalProcess.0
 
    mQ = LocalProcess.mI
 
    if mQ \= "" then do
+      do kI = 1 to LocalProcess.mQ.0
+         tQ = LocalProcess.mQ.kI
+         if tQ \= "" then do
+            Call Printf SysVars.SysMonName, MsgLLevelDisplayOther, "Purge de "tQ
+            Address SYSTEM 'rxqueue 'tQ' /clear'
+         End
+      End
       Rc = CancelLoopForProcess( mQ )
       Rc = LinkMessage( mQ, "SYS_STOP", SysVars.SysLEnd )
       Call Printf SysVars.SysMonName, MsgLLevelDisplaySyst, "Arrêt demandé pour "mQ

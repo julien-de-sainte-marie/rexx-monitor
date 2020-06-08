@@ -1815,7 +1815,7 @@ end
 
 /* Lecture buffer clavier */
 if Lines() > 0 then do
-   Pull Cmd
+   Parse Pull Cmd
    Local = 1
    Call ScanCmd
    Local = 0
@@ -1839,7 +1839,7 @@ if perso = 0 then do
       Otherwise
          if Local = 0 then Call SysOut sCmd, "1"
          Cmd = sCmd
-         'Call q.rexx 'Cmd
+         'rexx q.rexx 'Cmd
    end
 end
 Cmd = ""
@@ -1866,23 +1866,23 @@ Select
       Call SysCls
       Say "********************** AIDE GENERALE *****************************************"
       Say "ME LIST [ PROCESS | EVENTS | MESSAGES ][, fichier]"
-      Say "ME EXEC CMD commande                    Excuter une commande"
-      Say "ME EXEC CALL fonction                   Excuter une fonction"
-      Say "ME EXEC PRO programme                   Excuter un programme"
-      Say "ME EXEC FILE fichier                    Excuter un fichier"
+      Say "ME EXEC CMD commande                    Exécuter une commande"
+      Say "ME EXEC CALL fonction                   Exécuter une fonction"
+      Say "ME EXEC PRO programme                   Exécuter un programme"
+      Say "ME EXEC FILE fichier                    Exécuter un fichier"
       Say "ME END                                  Terminer le process"
       Say "ME CREATE EVENT nom                     Ajouter un identifiant de message"
-      Say "ME ADD EVENT nom message                Affecter un message  'nom'"
-      Say "ME CLEAR EVENT nom                      Supprimer les messages affects  'nom'"
+      Say "ME ADD EVENT nom message                Affecter un message à 'nom'"
+      Say "ME CLEAR EVENT nom                      Supprimer les messages affectés à 'nom'"
       Say "ME DELETE EVENT nom                     Supprimer un identifiant de message"
-      Say "ME LOG                                  Afficher la LOG systme"
-      Say "TRUNCLOG                                Effacer la LOG systme"
+      Say "ME LOG                                  Afficher la LOG système"
+      Say "TRUNCLOG                                Effacer la LOG système"
       Say "process message                         Envoyer un message pour un process"
-      Say "        EXECCMD commande                Excuter une commande par un process"
-      Say "        SETTIME nn                      Dure des boucles de sommeil"
-      Say "        TRACE [ ON | OFF ]              Activer/dsactiver la trace du process"
+      Say "        EXECCMD commande                Exécuter une commande par un process"
+      Say "        SETTIME nn                      Durée des boucles de sommeil"
+      Say "        TRACE [ ON | OFF ]              Activer/désactiver la trace du process"
       Say "        WAIT                            Mettre le process en sommeil"
-      Say "        WAKE                            Rveiller le process"
+      Say "        WAKE                            Réveiller le process"
       Say ""
    End
    when a1 = "EXEC" then do
@@ -1937,7 +1937,7 @@ cerr = rc
 Say ""
 Say "***************************** ATTENTION *****************************"
 Say "*****            Erreur de traitement de la commande            *****"
-Say "*****           Reprise sur fin de procdure effectue          *****"
+Say "*****           Reprise sur fin de procédure effectuée          *****"
 Say "***************************** ATTENTION *****************************"
 Say "Systeme error #"cerr
 Say "Systeme message "errortext(cerr)
